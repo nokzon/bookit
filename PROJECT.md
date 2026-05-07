@@ -1,5 +1,3 @@
-@AGENTS.md
-
 # Bookit
 
 Mobile-first web app: scan a book's ISBN (camera + OCR or barcode), look up metadata via the Hardcover API, save and compare books.
@@ -67,10 +65,3 @@ Protected routes (redirect to `/login` if not authenticated): `/scan`, `/saved`,
 - FR-08 Add/remove from Saved
 - FR-09 Compare two books on author, rating, price, publication year — Hardcover may lack price; design for missing fields
 - FR-10 Email/password auth ✅ (this session)
-
-## Working norms
-
-- When stack/architecture decisions aren't pre-made, **ask before guessing**.
-- Show commands before running anything destructive (scaffolders, mass installs, deletions).
-- Respect explicit out-of-scope lists — don't pre-build adjacent features.
-- Summarize "done / next" at the end of meaningful work units.

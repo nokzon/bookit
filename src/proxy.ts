@@ -28,7 +28,7 @@ export async function proxy(request: NextRequest) {
   );
 
   // IMPORTANT: this getUser() call refreshes the session tokens.
-  // Removing it will cause silent session expiry — see CLAUDE.md.
+  // Removing it will cause silent session expiry — see PROJECT.md.
   const {
     data: { user },
   } = await supabase.auth.getUser();
