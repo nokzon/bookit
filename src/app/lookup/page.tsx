@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { isValidIsbn13, normalizeIsbn13 } from "@/lib/isbn";
 import { lookupBookByIsbn, type HardcoverBook } from "@/lib/hardcover";
+import { upsertBook } from "@/lib/db/books";
+import { recordRecent } from "@/lib/db/recents";
+import { isSaved } from "@/lib/db/saved";
+import { saveBook, unsaveBook } from "@/app/saved/actions";
 
 type SearchParams = Promise<{ isbn?: string }>;
 
@@ -24,7 +29,9 @@ export default async function LookupPage({
     | { kind: "invalid"; input: string }
     | { kind: "not-found"; isbn: string }
     | { kind: "error"; message: string }
-    | { kind: "ok"; book: HardcoverBook } = { kind: "idle" };
+    | { kind: "ok"; book: HardcoverBook; bookId: number; saved: boolean } = {
+    kind: "idle",
+  };
 
   if (submitted) {
     if (!isValidIsbn13(normalized)) {
@@ -37,18 +44,32 @@ export default async function LookupPage({
             ? { kind: "not-found", isbn: normalized }
             : { kind: "error", message: result.message ?? "Unknown API error" };
       } else {
-        state = { kind: "ok", book: result.book };
+        const bookId = await upsertBook(result.book);
+        await recordRecent(bookId);
+        const saved = await isSaved(bookId);
+        state = { kind: "ok", book: result.book, bookId, saved };
       }
     }
   }
 
   return (
     <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-8">
-      <header>
-        <h1 className="text-2xl font-semibold mb-1">ISBN lookup</h1>
+      <header className="space-y-2">
+        <h1 className="text-2xl font-semibold">ISBN lookup</h1>
         <p className="text-sm text-gray-600">
           Dev tool — replace with camera/OCR scan once FR-01–03 land.
         </p>
+        <nav className="flex gap-4 text-sm pt-2">
+          <Link href="/recents" className="text-gray-700 underline">
+            Recents
+          </Link>
+          <Link href="/saved" className="text-gray-700 underline">
+            Saved
+          </Link>
+          <Link href="/" className="text-gray-700 underline">
+            Home
+          </Link>
+        </nav>
       </header>
 
       <form action={lookupAction} className="flex gap-2">
@@ -89,12 +110,26 @@ export default async function LookupPage({
         </p>
       )}
 
-      {state.kind === "ok" && <BookCard book={state.book} />}
+      {state.kind === "ok" && (
+        <BookCard
+          book={state.book}
+          bookId={state.bookId}
+          saved={state.saved}
+        />
+      )}
     </main>
   );
 }
 
-function BookCard({ book }: { book: HardcoverBook }) {
+function BookCard({
+  book,
+  bookId,
+  saved,
+}: {
+  book: HardcoverBook;
+  bookId: number;
+  saved: boolean;
+}) {
   return (
     <article className="rounded-lg border border-gray-200 p-5 flex gap-5">
       {book.coverUrl ? (
@@ -169,6 +204,24 @@ function BookCard({ book }: { book: HardcoverBook }) {
             {book.description}
           </p>
         )}
+
+        <form
+          action={saved ? unsaveBook : saveBook}
+          className="pt-3 border-t border-gray-100 mt-3"
+        >
+          <input type="hidden" name="bookId" value={bookId} />
+          <input type="hidden" name="next" value={`/lookup?isbn=${book.isbn13}`} />
+          <button
+            type="submit"
+            className={
+              saved
+                ? "rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
+                : "rounded-md bg-[#333] hover:bg-[#4a4a4a] active:bg-[#1a1a1a] px-3 py-1.5 text-sm font-medium text-white transition-colors"
+            }
+          >
+            {saved ? "✓ Saved (click to remove)" : "Save"}
+          </button>
+        </form>
       </div>
     </article>
   );
