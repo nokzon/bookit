@@ -19,6 +19,9 @@ export default async function SavedPage() {
           <Link href="/recents" className="text-gray-700 underline">
             Recents
           </Link>
+          <Link href="/compare" className="text-gray-700 underline">
+            Compare
+          </Link>
           <Link href="/" className="text-gray-700 underline">
             Home
           </Link>

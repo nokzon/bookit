@@ -18,6 +18,7 @@ const BOOK_BY_ISBN_QUERY = `
         rating
         users_count
         cached_image
+        cached_tags
         contributions {
           author { name }
         }
@@ -25,6 +26,20 @@ const BOOK_BY_ISBN_QUERY = `
     }
   }
 `;
+
+const MAX_TAGS_PER_CATEGORY = 6;
+
+type CachedTag = { tag: string; count?: number };
+type CachedTagsByCategory = Record<string, CachedTag[]>;
+
+function pickTopTags(tags: CachedTag[] | undefined): string[] {
+  if (!Array.isArray(tags)) return [];
+  return [...tags]
+    .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+    .slice(0, MAX_TAGS_PER_CATEGORY)
+    .map((t) => t.tag)
+    .filter((t): t is string => typeof t === "string" && t.length > 0);
+}
 
 export type HardcoverBook = {
   editionId: number;
@@ -40,6 +55,8 @@ export type HardcoverBook = {
   usersCount: number | null;
   coverUrl: string | null;
   authors: string[];
+  genres: string[];
+  themes: string[];
 };
 
 export type LookupResult =
@@ -60,6 +77,7 @@ type EditionRaw = {
     rating: number | null;
     users_count: number | null;
     cached_image: { url?: string } | null;
+    cached_tags: CachedTagsByCategory | null;
     contributions: Array<{ author: { name: string } | null }>;
   } | null;
 };
@@ -130,6 +148,12 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
     .map((c) => c.author?.name)
     .filter((n): n is string => Boolean(n));
 
+  const tagsByCategory = book?.cached_tags ?? {};
+  const genres = pickTopTags(tagsByCategory.Genre);
+  // Hardcover's "Mood" category corresponds to what the Figma calls "Themes"
+  // (sad / dark / emotional / challenging / reflective).
+  const themes = pickTopTags(tagsByCategory.Mood);
+
   return {
     editionId: edition.id,
     editionTitle: edition.title,
@@ -144,5 +168,7 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
     usersCount: book?.users_count ?? null,
     coverUrl: book?.cached_image?.url ?? null,
     authors,
+    genres,
+    themes,
   };
 }

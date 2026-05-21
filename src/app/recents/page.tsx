@@ -18,6 +18,9 @@ export default async function RecentsPage() {
           <Link href="/saved" className="text-gray-700 underline">
             Saved
           </Link>
+          <Link href="/compare" className="text-gray-700 underline">
+            Compare
+          </Link>
           <Link href="/" className="text-gray-700 underline">
             Home
           </Link>

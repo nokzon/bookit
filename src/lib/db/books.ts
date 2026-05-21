@@ -16,6 +16,8 @@ export type DbBook = {
   pages: number | null;
   release_date: string | null;
   publisher: string | null;
+  genres: string[];
+  themes: string[];
   cached_at: string;
 };
 
@@ -38,6 +40,8 @@ export async function upsertBook(book: HardcoverBook): Promise<number> {
         pages: book.pages,
         release_date: book.releaseDate,
         publisher: book.publisher,
+        genres: book.genres,
+        themes: book.themes,
         cached_at: new Date().toISOString(),
       },
       { onConflict: "isbn_13" },
