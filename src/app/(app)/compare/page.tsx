@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listSaved } from "@/lib/db/saved";
-import type { DbBook } from "@/lib/db/books";
+import { getBookById, type DbBook } from "@/lib/db/books";
 
 type SearchParams = Promise<{ a?: string; b?: string; focus?: string }>;
 
@@ -18,8 +18,11 @@ export default async function ComparePage({
   const byId = new Map<number, DbBook>();
   for (const entry of saved) byId.set(entry.bookId, entry.book);
 
-  const bookA = aId !== null ? byId.get(aId) ?? null : null;
-  const bookB = bId !== null ? byId.get(bId) ?? null : null;
+  // Book A can be any book the user has identified (saved or just looked up).
+  // Book B is always picked from the user's saved list.
+  const bookA =
+    aId !== null ? (byId.get(aId) ?? (await getBookById(aId))) : null;
+  const bookB = bId !== null ? (byId.get(bId) ?? null) : null;
 
   // Drop selections that aren't actually in saved (e.g. unsaved since URL was set)
   const validA = bookA ? aId : null;
@@ -33,7 +36,7 @@ export default async function ComparePage({
         : "picking-a";
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-2xl px-6 py-12 space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Compare books</h1>
         <p className="text-sm text-gray-600">
@@ -42,23 +45,6 @@ export default async function ComparePage({
           {state === "comparing" &&
             "Tap a book to see its genres and themes. Use Change Book to swap one side."}
         </p>
-        <nav className="flex flex-wrap gap-4 text-sm pt-2">
-          <Link href="/scan" className="text-gray-700 underline">
-            Scan
-          </Link>
-          <Link href="/lookup" className="text-gray-700 underline">
-            Lookup
-          </Link>
-          <Link href="/recents" className="text-gray-700 underline">
-            Recents
-          </Link>
-          <Link href="/saved" className="text-gray-700 underline">
-            Saved
-          </Link>
-          <Link href="/" className="text-gray-700 underline">
-            Home
-          </Link>
-        </nav>
       </header>
 
       {/* Slot row */}

@@ -5,7 +5,7 @@ import { lookupBookByIsbn, type HardcoverBook } from "@/lib/hardcover";
 import { upsertBook } from "@/lib/db/books";
 import { recordRecent } from "@/lib/db/recents";
 import { isSaved } from "@/lib/db/saved";
-import { saveBook, unsaveBook } from "@/app/saved/actions";
+import { saveBook, unsaveBook } from "@/app/(app)/saved/actions";
 
 type SearchParams = Promise<{ isbn?: string }>;
 
@@ -53,29 +53,16 @@ export default async function LookupPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">ISBN lookup</h1>
+        <h1 className="text-2xl font-semibold">Search by ISBN</h1>
         <p className="text-sm text-gray-600">
-          Dev tool — replace with camera/OCR scan once FR-01–03 land.
+          Type or paste a 13-digit ISBN to look up a book. (Or tap{" "}
+          <Link href="/scan" className="underline">
+            Bookit
+          </Link>{" "}
+          to scan instead.)
         </p>
-        <nav className="flex flex-wrap gap-4 text-sm pt-2">
-          <Link href="/scan" className="text-gray-700 underline">
-            Scan
-          </Link>
-          <Link href="/recents" className="text-gray-700 underline">
-            Recents
-          </Link>
-          <Link href="/saved" className="text-gray-700 underline">
-            Saved
-          </Link>
-          <Link href="/compare" className="text-gray-700 underline">
-            Compare
-          </Link>
-          <Link href="/" className="text-gray-700 underline">
-            Home
-          </Link>
-        </nav>
       </header>
 
       <form action={lookupAction} className="flex gap-2">
@@ -211,23 +198,32 @@ function BookCard({
           </p>
         )}
 
-        <form
-          action={saved ? unsaveBook : saveBook}
-          className="pt-3 border-t border-gray-100 mt-3"
-        >
-          <input type="hidden" name="bookId" value={bookId} />
-          <input type="hidden" name="next" value={`/lookup?isbn=${book.isbn13}`} />
-          <button
-            type="submit"
-            className={
-              saved
-                ? "rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
-                : "rounded-md bg-[#333] hover:bg-[#4a4a4a] active:bg-[#1a1a1a] px-3 py-1.5 text-sm font-medium text-white transition-colors"
-            }
+        <div className="pt-3 border-t border-gray-100 mt-3 flex flex-wrap gap-2">
+          <form action={saved ? unsaveBook : saveBook}>
+            <input type="hidden" name="bookId" value={bookId} />
+            <input
+              type="hidden"
+              name="next"
+              value={`/lookup?isbn=${book.isbn13}`}
+            />
+            <button
+              type="submit"
+              className={
+                saved
+                  ? "rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
+                  : "rounded-md bg-[#333] hover:bg-[#4a4a4a] active:bg-[#1a1a1a] px-3 py-1.5 text-sm font-medium text-white transition-colors"
+              }
+            >
+              {saved ? "✓ Saved (click to remove)" : "Save"}
+            </button>
+          </form>
+          <Link
+            href={`/compare?a=${bookId}`}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-50"
           >
-            {saved ? "✓ Saved (click to remove)" : "Save"}
-          </button>
-        </form>
+            Compare with another book
+          </Link>
+        </div>
       </div>
     </article>
   );

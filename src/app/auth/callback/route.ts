@@ -5,8 +5,10 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const errorParam = searchParams.get("error_description") ?? searchParams.get("error");
-  const rawNext = searchParams.get("next") ?? "/";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  // Mirrors auth/actions.ts: /scan is the canonical landing for signed-in users.
+  const rawNext = searchParams.get("next") ?? "/scan";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/scan";
 
   if (errorParam) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(errorParam)}`);

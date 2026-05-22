@@ -5,9 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+// /scan is the canonical landing page for signed-in users (the Bookit "home").
+const DEFAULT_NEXT = "/scan";
+
 function safeNext(value: FormDataEntryValue | null): string {
   const next = typeof value === "string" ? value : "";
-  return next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  return next.startsWith("/") && !next.startsWith("//") ? next : DEFAULT_NEXT;
 }
 
 export async function signInWithGoogle(formData: FormData) {

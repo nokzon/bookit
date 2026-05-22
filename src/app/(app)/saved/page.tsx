@@ -1,34 +1,17 @@
 import Link from "next/link";
 import { listSaved, type SavedEntry } from "@/lib/db/saved";
-import { unsaveBook } from "@/app/saved/actions";
+import { unsaveBook } from "@/app/(app)/saved/actions";
 
 export default async function SavedPage() {
   const entries = await listSaved();
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Saved</h1>
         <p className="text-sm text-gray-600">
           Books you&apos;ve saved, most recent first.
         </p>
-        <nav className="flex flex-wrap gap-4 text-sm pt-2">
-          <Link href="/scan" className="text-gray-700 underline">
-            Scan
-          </Link>
-          <Link href="/lookup" className="text-gray-700 underline">
-            Lookup
-          </Link>
-          <Link href="/recents" className="text-gray-700 underline">
-            Recents
-          </Link>
-          <Link href="/compare" className="text-gray-700 underline">
-            Compare
-          </Link>
-          <Link href="/" className="text-gray-700 underline">
-            Home
-          </Link>
-        </nav>
       </header>
 
       {entries.length === 0 ? (

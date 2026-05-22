@@ -5,29 +5,12 @@ export default async function RecentsPage() {
   const entries = await listRecents(50);
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-8">
+    <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-6">
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold">Recents</h1>
         <p className="text-sm text-gray-600">
           Books you&apos;ve looked up, most recent first.
         </p>
-        <nav className="flex flex-wrap gap-4 text-sm pt-2">
-          <Link href="/scan" className="text-gray-700 underline">
-            Scan
-          </Link>
-          <Link href="/lookup" className="text-gray-700 underline">
-            Lookup
-          </Link>
-          <Link href="/saved" className="text-gray-700 underline">
-            Saved
-          </Link>
-          <Link href="/compare" className="text-gray-700 underline">
-            Compare
-          </Link>
-          <Link href="/" className="text-gray-700 underline">
-            Home
-          </Link>
-        </nav>
       </header>
 
       {entries.length === 0 ? (
