@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
-import { Livvic } from "next/font/google";
+import { Livvic, Jost } from "next/font/google";
 import "./globals.css";
 
 const livvic = Livvic({
   variable: "--font-livvic",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const jost = Jost({
+  variable: "--font-jost",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -19,7 +25,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${livvic.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${livvic.variable} ${jost.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );
