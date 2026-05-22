@@ -42,7 +42,10 @@ export default async function ComparePage({
           {state === "comparing" &&
             "Tap a book to see its genres and themes. Use Change Book to swap one side."}
         </p>
-        <nav className="flex gap-4 text-sm pt-2">
+        <nav className="flex flex-wrap gap-4 text-sm pt-2">
+          <Link href="/scan" className="text-gray-700 underline">
+            Scan
+          </Link>
           <Link href="/lookup" className="text-gray-700 underline">
             Lookup
           </Link>

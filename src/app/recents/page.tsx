@@ -11,7 +11,10 @@ export default async function RecentsPage() {
         <p className="text-sm text-gray-600">
           Books you&apos;ve looked up, most recent first.
         </p>
-        <nav className="flex gap-4 text-sm pt-2">
+        <nav className="flex flex-wrap gap-4 text-sm pt-2">
+          <Link href="/scan" className="text-gray-700 underline">
+            Scan
+          </Link>
           <Link href="/lookup" className="text-gray-700 underline">
             Lookup
           </Link>

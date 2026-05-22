@@ -59,7 +59,10 @@ export default async function LookupPage({
         <p className="text-sm text-gray-600">
           Dev tool — replace with camera/OCR scan once FR-01–03 land.
         </p>
-        <nav className="flex gap-4 text-sm pt-2">
+        <nav className="flex flex-wrap gap-4 text-sm pt-2">
+          <Link href="/scan" className="text-gray-700 underline">
+            Scan
+          </Link>
           <Link href="/recents" className="text-gray-700 underline">
             Recents
           </Link>
