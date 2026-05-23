@@ -3,7 +3,7 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { createClient } from "@/lib/supabase/server";
 
 // Pale brand background used across all signed-in pages.
-const APP_BACKGROUND = "#ECF1E0";
+const APP_BACKGROUND = "#F9FDF8";
 
 export default async function AppLayout({
   children,
