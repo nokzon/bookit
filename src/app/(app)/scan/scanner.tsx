@@ -43,6 +43,18 @@ export function Scanner() {
     stateRef.current = state;
   }, [state]);
 
+  // Haptic feedback when a book is successfully identified. Vibration API is
+  // unsupported on iOS Safari — feature-detect and silently skip.
+  useEffect(() => {
+    if (
+      state.kind === "identified" &&
+      typeof navigator !== "undefined" &&
+      typeof navigator.vibrate === "function"
+    ) {
+      navigator.vibrate(50);
+    }
+  }, [state.kind]);
+
   const isPaused = () => {
     const k = stateRef.current.kind;
     return k === "previewing" || k === "identified" || k === "not-found";
@@ -277,7 +289,7 @@ function ResultOverlay({
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl shadow-2xl border-t border-black/5 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-4"
-      style={{ backgroundColor: "#FCFBF7" }}
+      style={{ backgroundColor: "#F3F2EE" }}
     >
       {children}
       <button
@@ -300,36 +312,126 @@ function IdentifiedPopup({
   onConfirm: () => void;
   onDismiss: () => void;
 }) {
+  // Slide-up on mount + swipe-down-to-dismiss gesture (on the handle area).
+  // translateY is a percentage of the popup height: 0 = fully visible,
+  // 100 = fully off-screen.
+  const [translateY, setTranslateY] = useState(100);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef<number | null>(null);
+
+  // Animate from 100 -> 0 on first frame after mount.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTranslateY(0));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    dragStartY.current = e.touches[0].clientY;
+    setIsDragging(true);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (dragStartY.current === null) return;
+    const delta = e.touches[0].clientY - dragStartY.current;
+    if (delta > 0) {
+      // 400 = popup content height; convert px drag to %.
+      setTranslateY(Math.min(100, (delta / 400) * 100));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (dragStartY.current === null) return;
+    dragStartY.current = null;
+    setIsDragging(false);
+    if (translateY > 25) {
+      // Past dismissal threshold — slide all the way out, then notify parent.
+      setTranslateY(100);
+      window.setTimeout(onDismiss, 250);
+    } else {
+      // Snap back to fully visible.
+      setTranslateY(0);
+    }
+  };
+
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl shadow-2xl border-t border-black/5"
-      style={{ backgroundColor: "#FCFBF7" }}
+      className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl shadow-2xl border-t border-black/5 flex flex-col items-center px-5"
+      style={{
+        backgroundColor: "#F3F2EE",
+        height: "calc(400px + env(safe-area-inset-bottom))",
+        paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+        transform: `translateY(${translateY}%)`,
+        transition: isDragging ? "none" : "transform 0.3s ease-out",
+        willChange: "transform",
+      }}
     >
-      <div className="flex justify-center pt-2 pb-1">
-        <div className="w-10 h-1 rounded-full bg-gray-300" />
+      {/* Drag handle — enlarged tap target with touch handlers for dismiss */}
+      <div
+        className="self-stretch flex justify-center pt-2 pb-3 cursor-grab touch-none select-none"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        aria-label="Drag down to dismiss"
+        role="button"
+      >
+        <div className="w-10 h-1 rounded-full bg-gray-300 flex-shrink-0" />
       </div>
 
-      <div className="px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-4">
-        <h2 className="text-center text-xl font-bold text-[#1E1E1E]">
-          Book Identified
-        </h2>
+      <h2
+        className="flex-shrink-0"
+        style={{
+          color: "#333",
+          textAlign: "center",
+          fontFeatureSettings: '"liga" off, "clig" off',
+          fontFamily: "var(--font-livvic), system-ui, sans-serif",
+          fontSize: "24px",
+          fontStyle: "normal",
+          fontWeight: 600,
+          lineHeight: "22px",
+          letterSpacing: "-0.43px",
+        }}
+      >
+        Book Identified
+      </h2>
 
-        <div className="flex gap-4">
+      <div className="flex-1 w-full flex items-center justify-center min-h-0">
+        <div className="flex items-center gap-5">
           {book.coverUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={book.coverUrl}
               alt=""
-              className="w-24 h-auto rounded-md shadow-md flex-shrink-0"
+              className="flex-shrink-0"
+              style={{
+                width: "120px",
+                height: "182px",
+                aspectRatio: "60/91",
+                borderRadius: "2px",
+                boxShadow: "7px 9px 8px 0 rgba(0, 0, 0, 0.25)",
+                objectFit: "cover",
+              }}
             />
           ) : (
-            <div className="w-24 h-36 rounded-md bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 flex-shrink-0">
+            <div
+              className="bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 flex-shrink-0"
+              style={{
+                width: "120px",
+                height: "182px",
+                aspectRatio: "60/91",
+                borderRadius: "2px",
+                boxShadow: "7px 9px 8px 0 rgba(0, 0, 0, 0.25)",
+              }}
+            >
               no cover
             </div>
           )}
 
-          <div className="flex-1 min-w-0 space-y-1">
-            <p className="text-base font-bold leading-tight line-clamp-2">
+          <div
+            className="min-w-0 max-w-[180px] space-y-1.5"
+            style={{ fontFamily: "var(--font-jost), system-ui, sans-serif" }}
+          >
+            <p className="text-[17px] font-bold leading-tight line-clamp-2 text-[#1E1E1E]">
               {book.title ?? "Untitled"}
             </p>
             {book.authors.length > 0 && (
@@ -366,25 +468,26 @@ function IdentifiedPopup({
             )}
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-2 pt-1">
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="flex-1 rounded-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 px-5 py-3 text-base font-semibold text-white transition-colors"
-          >
-            View Book Details
-          </button>
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Scan another book"
-            className="w-12 h-12 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 flex items-center justify-center transition-colors"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/scan/camera-icon.svg" alt="" width={20} height={20} />
-          </button>
-        </div>
+      <div className="flex items-center gap-2 self-stretch flex-shrink-0">
+        <button
+          type="button"
+          onClick={onConfirm}
+          className="flex-1 rounded-full px-5 py-3 text-base font-semibold text-white transition-colors hover:opacity-90 active:opacity-80"
+          style={{ backgroundColor: "#33A45D" }}
+        >
+          View Book Details
+        </button>
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label="Scan another book"
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-opacity hover:opacity-70 active:opacity-50"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/scan/camera-icon.svg" alt="" width={20} height={20} />
+        </button>
       </div>
     </div>
   );
