@@ -6,6 +6,7 @@ export type DbBook = {
   id: number;
   isbn_13: string;
   hardcover_edition_id: number | null;
+  hardcover_slug: string | null;
   title: string | null;
   subtitle: string | null;
   description: string | null;
@@ -30,6 +31,7 @@ export async function upsertBook(book: HardcoverBook): Promise<number> {
       {
         isbn_13: book.isbn13,
         hardcover_edition_id: book.editionId,
+        hardcover_slug: book.slug,
         title: book.title,
         subtitle: book.subtitle,
         description: book.description,

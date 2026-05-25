@@ -459,7 +459,7 @@ function IdentifiedPopup({
                 {book.genres.slice(0, 3).map((g) => (
                   <li
                     key={g}
-                    className="rounded-full bg-gray-100 text-gray-700 text-xs px-2.5 py-0.5"
+                    className="rounded-full bg-[#E7E5E3] text-gray-700 text-xs px-2.5 py-0.5"
                   >
                     {g}
                   </li>

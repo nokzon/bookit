@@ -14,6 +14,7 @@ const BOOK_BY_ISBN_QUERY = `
       book {
         title
         subtitle
+        slug
         description
         rating
         users_count
@@ -21,6 +22,21 @@ const BOOK_BY_ISBN_QUERY = `
         cached_tags
         contributions {
           author { name }
+        }
+        user_books(
+          where: { review_raw: { _is_null: false, _neq: "" } }
+          order_by: [
+            { likes_count: desc_nulls_last }
+            { rating: desc_nulls_last }
+          ]
+          limit: 5
+        ) {
+          rating
+          review_raw
+          user {
+            username
+            image { url }
+          }
         }
       }
     }
@@ -41,6 +57,13 @@ function pickTopTags(tags: CachedTag[] | undefined): string[] {
     .filter((t): t is string => typeof t === "string" && t.length > 0);
 }
 
+export type HardcoverReview = {
+  rating: number | null;
+  text: string;
+  username: string;
+  avatarUrl: string | null;
+};
+
 export type HardcoverBook = {
   editionId: number;
   editionTitle: string | null;
@@ -50,6 +73,7 @@ export type HardcoverBook = {
   publisher: string | null;
   title: string | null;
   subtitle: string | null;
+  slug: string | null;
   description: string | null;
   rating: number | null;
   usersCount: number | null;
@@ -57,11 +81,21 @@ export type HardcoverBook = {
   authors: string[];
   genres: string[];
   themes: string[];
+  reviews: HardcoverReview[];
 };
 
 export type LookupResult =
   | { ok: true; book: HardcoverBook }
   | { ok: false; reason: "not-found" | "api-error"; message?: string };
+
+type UserBookRaw = {
+  rating: number | null;
+  review_raw: string | null;
+  user: {
+    username: string | null;
+    image: { url: string | null } | null;
+  } | null;
+};
 
 type EditionRaw = {
   id: number;
@@ -73,12 +107,14 @@ type EditionRaw = {
   book: {
     title: string | null;
     subtitle: string | null;
+    slug: string | null;
     description: string | null;
     rating: number | null;
     users_count: number | null;
     cached_image: { url?: string } | null;
     cached_tags: CachedTagsByCategory | null;
     contributions: Array<{ author: { name: string } | null }>;
+    user_books: UserBookRaw[];
   } | null;
 };
 
@@ -154,6 +190,15 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
   // (sad / dark / emotional / challenging / reflective).
   const themes = pickTopTags(tagsByCategory.Mood);
 
+  const reviews: HardcoverReview[] = (book?.user_books ?? [])
+    .map((ub) => ({
+      rating: ub.rating,
+      text: (ub.review_raw ?? "").trim(),
+      username: ub.user?.username ?? "anonymous",
+      avatarUrl: ub.user?.image?.url ?? null,
+    }))
+    .filter((r) => r.text.length > 0);
+
   return {
     editionId: edition.id,
     editionTitle: edition.title,
@@ -163,6 +208,7 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
     publisher: edition.publisher?.name ?? null,
     title: book?.title ?? edition.title ?? null,
     subtitle: book?.subtitle ?? null,
+    slug: book?.slug ?? null,
     description: book?.description ?? null,
     rating: book?.rating ?? null,
     usersCount: book?.users_count ?? null,
@@ -170,5 +216,6 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
     authors,
     genres,
     themes,
+    reviews,
   };
 }
