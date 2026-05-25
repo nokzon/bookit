@@ -355,7 +355,7 @@ function IdentifiedPopup({
 
   return (
     <div
-      className="fixed left-[10px] right-[10px] z-50 rounded-3xl shadow-2xl border border-black/5 flex flex-col items-center px-5 touch-none"
+      className="fixed left-[10px] right-[10px] z-50 rounded-[44px] shadow-2xl border border-black/5 flex flex-col items-center px-5 touch-none"
       style={{
         backgroundColor: "#F5F5F5",
         bottom: "calc(10px + env(safe-area-inset-bottom))",
