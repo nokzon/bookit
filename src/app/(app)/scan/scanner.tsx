@@ -355,25 +355,25 @@ function IdentifiedPopup({
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl shadow-2xl border-t border-black/5 flex flex-col items-center px-5"
+      className="fixed left-[10px] right-[10px] z-50 rounded-3xl shadow-2xl border border-black/5 flex flex-col items-center px-5 touch-none"
       style={{
-        backgroundColor: "#F3F2EE",
-        height: "calc(400px + env(safe-area-inset-bottom))",
-        paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom))",
+        backgroundColor: "#F5F5F5",
+        bottom: "calc(10px + env(safe-area-inset-bottom))",
+        height: "400px",
+        paddingBottom: "1.25rem",
         transform: `translateY(${translateY}%)`,
         transition: isDragging ? "none" : "transform 0.3s ease-out",
         willChange: "transform",
       }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
     >
-      {/* Drag handle — enlarged tap target with touch handlers for dismiss */}
+      {/* Drag handle (visual only — gesture is on the whole popup) */}
       <div
-        className="self-stretch flex justify-center pt-2 pb-3 cursor-grab touch-none select-none"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        aria-label="Drag down to dismiss"
-        role="button"
+        className="self-stretch flex justify-center pt-2 pb-3 select-none"
+        aria-hidden="true"
       >
         <div className="w-10 h-1 rounded-full bg-gray-300 flex-shrink-0" />
       </div>
