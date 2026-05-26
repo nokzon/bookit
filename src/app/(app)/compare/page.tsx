@@ -47,7 +47,11 @@ export default async function ComparePage({
       >
         <header className="flex items-center justify-between gap-4">
           <h1 className="text-3xl font-bold leading-tight">Compare Books</h1>
-          <BackButton />
+          <BackButton
+            href={
+              bookA?.isbn_13 ? `/lookup?isbn=${bookA.isbn_13}` : "/scan"
+            }
+          />
         </header>
 
         {/* Slot row — centered, 40px gap between slots */}
@@ -228,6 +232,7 @@ function SlotCard({
               src={book.cover_url}
               alt=""
               className="w-full h-full object-contain"
+              style={{ borderRadius: "2px" }}
             />
           ) : (
             <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">
