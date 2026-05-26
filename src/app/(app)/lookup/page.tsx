@@ -411,6 +411,40 @@ function BookDetail({
       {book.reviews.length > 0 && (
         <section className="space-y-3">
           <h2 style={SECTION_HEADING_STYLE}>Popular Reviews</h2>
+          {book.slug && (
+            <a
+              href={`https://hardcover.app/books/${book.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center transition-opacity hover:opacity-80 active:opacity-60"
+              style={{
+                padding: "4px 12px",
+                gap: "6.712px",
+                borderRadius: "100px",
+                border: "1px solid rgba(84, 84, 84, 0.10)",
+                background: "rgba(255, 255, 255, 0.80)",
+                fontFamily: JOST_STACK,
+                fontSize: "16px",
+                color: "#1E1E1E",
+              }}
+            >
+              <span>View in</span>
+              <span
+                className="inline-flex items-center"
+                style={{ gap: "4px" }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/book-details/hardcover-logo.png"
+                  alt=""
+                  width={18}
+                  height={22}
+                  aria-hidden="true"
+                />
+                <span style={{ fontWeight: 700 }}>Hardcover</span>
+              </span>
+            </a>
+          )}
           <ul className="space-y-3">
             {book.reviews.map((r, i) => (
               <li key={i}>
@@ -419,44 +453,6 @@ function BookDetail({
             ))}
           </ul>
         </section>
-      )}
-
-      {/* View in Hardcover (4px below Popular Reviews) */}
-      {book.slug && (
-        <div className="flex justify-center" style={{ marginTop: "4px" }}>
-          <a
-            href={`https://hardcover.app/books/${book.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center transition-opacity hover:opacity-80 active:opacity-60"
-            style={{
-              padding: "4px 12px",
-              gap: "6.712px",
-              borderRadius: "100px",
-              border: "1px solid rgba(84, 84, 84, 0.10)",
-              background: "rgba(255, 255, 255, 0.80)",
-              fontFamily: JOST_STACK,
-              fontSize: "16px",
-              color: "#1E1E1E",
-            }}
-          >
-            <span>View in</span>
-            <span
-              className="inline-flex items-center"
-              style={{ gap: "4px" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/book-details/hardcover-logo.png"
-                alt=""
-                width={18}
-                height={22}
-                aria-hidden="true"
-              />
-              <span style={{ fontWeight: 700 }}>Hardcover</span>
-            </span>
-          </a>
-        </div>
       )}
     </FullscreenShell>
   );

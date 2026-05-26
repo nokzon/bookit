@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listSaved } from "@/lib/db/saved";
 import { getBookById, type DbBook } from "@/lib/db/books";
+import { BackButton } from "./back-button";
 
 type SearchParams = Promise<{ a?: string; b?: string; focus?: string }>;
 
@@ -36,65 +37,83 @@ export default async function ComparePage({
         : "picking-a";
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-12 space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Compare books</h1>
-        <p className="text-sm text-gray-600">
-          {state === "picking-a" && "Pick the first book to compare."}
-          {state === "picking-b" && "Pick the second book to compare."}
-          {state === "comparing" &&
-            "Tap a book to see its genres and themes. Use Change Book to swap one side."}
-        </p>
-      </header>
+    <main
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+      style={{ backgroundColor: "#F9FDF8" }}
+    >
+      <div
+        className="mx-auto w-full max-w-2xl px-6 pb-12 space-y-8"
+        style={{ paddingTop: "calc(60px + env(safe-area-inset-top))" }}
+      >
+        <header className="flex items-center justify-between gap-4">
+          <h1 className="text-3xl font-bold leading-tight">Compare Books</h1>
+          <BackButton />
+        </header>
 
-      {/* Slot row */}
-      <section className="grid grid-cols-2 gap-4">
-        <SlotCard
-          book={bookA}
-          isFocused={focus === "a"}
-          changeHref={`/compare${bookB ? `?b=${bookB.id}` : ""}`}
-          focusHref={
-            validA !== null && validB !== null
-              ? buildHref({ a: validA, b: validB, focus: focus === "a" ? null : "a" })
-              : null
-          }
-          placeholder="Select a Book"
-        />
-        <SlotCard
-          book={bookB}
-          isFocused={focus === "b"}
-          changeHref={validA !== null ? `/compare?a=${validA}` : "/compare"}
-          focusHref={
-            validA !== null && validB !== null
-              ? buildHref({ a: validA, b: validB, focus: focus === "b" ? null : "b" })
-              : null
-          }
-          placeholder="Select a Book"
-        />
-      </section>
+        {/* Slot row — centered, 40px gap between slots */}
+        <section className="flex justify-center" style={{ gap: "40px" }}>
+          {/* Slot A — no Change Book here; book A is set from the lookup
+              flow / Compare button, not changed from the compare page. */}
+          <SlotCard
+            book={bookA}
+            isFocused={focus === "a"}
+            changeHref={null}
+            focusHref={
+              validA !== null && validB !== null
+                ? buildHref({
+                    a: validA,
+                    b: validB,
+                    focus: focus === "a" ? null : "a",
+                  })
+                : null
+            }
+            placeholder="Select a Book"
+          />
+          <SlotCard
+            book={bookB}
+            isFocused={focus === "b"}
+            changeHref={validA !== null ? `/compare?a=${validA}` : "/compare"}
+            focusHref={
+              validA !== null && validB !== null
+                ? buildHref({
+                    a: validA,
+                    b: validB,
+                    focus: focus === "b" ? null : "b",
+                  })
+                : null
+            }
+            placeholder="Select a Book"
+          />
+        </section>
 
-      {/* Focused book's genres + themes (only when comparing AND focus is set) */}
-      {state === "comparing" && focus !== null && (
-        <TagPanel book={focus === "a" ? bookA! : bookB!} />
-      )}
+        {/* Focused book's genres + themes (only when comparing AND focus is set) */}
+        {state === "comparing" && focus !== null && (
+          <TagPanel book={focus === "a" ? bookA! : bookB!} />
+        )}
 
-      {/* Comparison card */}
-      {state === "comparing" && bookA && bookB && (
-        <ComparisonCard a={bookA} b={bookB} />
-      )}
+        {/* Comparison card */}
+        {state === "comparing" && bookA && bookB && (
+          <ComparisonCard a={bookA} b={bookB} />
+        )}
 
-      {/* Picker grid */}
-      {state !== "comparing" && (
-        <PickerGrid
-          saved={saved}
-          excludeBookId={validA}
-          buildHref={(bookId) =>
-            validA === null
-              ? `/compare?a=${bookId}`
-              : `/compare?a=${validA}&b=${bookId}`
-          }
-        />
-      )}
+        {/* Picker grid (with Scan tile + search bar) */}
+        {state !== "comparing" && (
+          <PickerGrid
+            saved={saved}
+            excludeBookId={validA}
+            buildHref={(bookId) =>
+              validA === null
+                ? `/compare?a=${bookId}`
+                : `/compare?a=${validA}&b=${bookId}`
+            }
+            scanHref={
+              validA !== null
+                ? `/scan?compareWith=${validA}`
+                : `/scan?compareWith=`
+            }
+          />
+        )}
+      </div>
     </main>
   );
 }
@@ -128,67 +147,115 @@ function SlotCard({
 }: {
   book: DbBook | null;
   isFocused: boolean;
-  changeHref: string;
+  changeHref: string | null;
   focusHref: string | null;
   placeholder: string;
 }) {
+  const JOST = "var(--font-jost), system-ui, sans-serif";
+  const COVER_WIDTH = 120; // 182 * 60/91 ≈ 120
+  const COVER_HEIGHT = 182;
+
+  const titleStyle = {
+    overflow: "hidden" as const,
+    color: "#000",
+    textOverflow: "ellipsis" as const,
+    fontFamily: JOST,
+    fontSize: "14px",
+    fontWeight: 400,
+    lineHeight: "normal" as const,
+    maxWidth: "100%",
+    whiteSpace: "nowrap" as const,
+    textAlign: "center" as const,
+  };
+
+  const authorStyle = {
+    color: "rgba(127, 127, 127, 0.50)",
+    fontFamily: JOST,
+    fontSize: "14px",
+    fontWeight: 400,
+    lineHeight: "normal" as const,
+    textAlign: "center" as const,
+    maxWidth: "100%",
+    // Note: no whiteSpace/overflow so it wraps onto multiple lines.
+  };
+
+  // Empty placeholder slot — dashed outline with "Select a Book" centered inside.
   if (!book) {
     return (
-      <div className="rounded-lg border-2 border-dashed border-gray-300 h-56 flex items-center justify-center text-sm text-gray-500 text-center px-4">
-        {placeholder}
+      <div
+        className="flex items-center justify-center text-center px-3"
+        style={{
+          width: `${COVER_WIDTH}px`,
+          height: `${COVER_HEIGHT}px`,
+          borderRadius: "2px",
+          border: "2px dashed #D1D5DB",
+        }}
+      >
+        <span style={authorStyle}>{placeholder}</span>
       </div>
     );
   }
 
   const Wrapper = focusHref
     ? ({ children }: { children: React.ReactNode }) => (
-        <Link href={focusHref} className="block">
-          {children}
-        </Link>
+        <Link href={focusHref}>{children}</Link>
       )
-    : ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+    : ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
   return (
-    <div className="space-y-2">
+    <div
+      className="flex flex-col items-center"
+      style={{ gap: "12px", width: `${COVER_WIDTH}px` }}
+    >
       <Wrapper>
         <div
-          className={[
-            "rounded-lg overflow-hidden border-2 transition-colors",
-            isFocused
-              ? "border-emerald-500 ring-2 ring-emerald-200"
-              : "border-gray-200",
-          ].join(" ")}
+          className="flex items-center justify-center overflow-hidden"
+          style={{
+            width: `${COVER_WIDTH}px`,
+            height: `${COVER_HEIGHT}px`,
+            borderRadius: "2px",
+            ...(isFocused
+              ? {
+                  outline: "2px solid #33A45D",
+                  outlineOffset: "2px",
+                }
+              : {}),
+          }}
         >
           {book.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={book.cover_url}
               alt=""
-              className="w-full h-44 object-cover"
+              className="w-full h-full object-contain"
             />
           ) : (
-            <div className="w-full h-44 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+            <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-400">
               no cover
             </div>
           )}
         </div>
-        <div className="px-1">
-          <p className="text-sm font-semibold leading-tight line-clamp-2">
-            {book.title ?? "Untitled"}
-          </p>
-          {book.authors.length > 0 && (
-            <p className="text-xs text-gray-600 truncate">
-              {book.authors.join(", ")}
-            </p>
-          )}
-        </div>
       </Wrapper>
-      <Link
-        href={changeHref}
-        className="inline-block rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-medium hover:bg-emerald-200"
+
+      {/* Title + author: 4px gap between them */}
+      <div
+        className="flex flex-col items-center"
+        style={{ gap: "4px", maxWidth: "100%" }}
       >
-        Change Book
-      </Link>
+        <p style={titleStyle}>{book.title ?? "Untitled"}</p>
+        {book.authors.length > 0 && (
+          <p style={authorStyle}>{book.authors.join(", ")}</p>
+        )}
+      </div>
+
+      {changeHref && (
+        <Link
+          href={changeHref}
+          className="inline-block rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-medium hover:bg-emerald-200"
+        >
+          Change Book
+        </Link>
+      )}
     </div>
   );
 }
@@ -299,45 +366,56 @@ function PickerGrid({
   saved,
   excludeBookId,
   buildHref,
+  scanHref,
 }: {
   saved: Awaited<ReturnType<typeof listSaved>>;
   excludeBookId: number | null;
   buildHref: (bookId: number) => string;
+  scanHref: string;
 }) {
   const candidates = saved.filter((entry) => entry.bookId !== excludeBookId);
 
-  if (saved.length === 0) {
-    return (
-      <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-        No saved books yet. Save at least two books from{" "}
-        <Link href="/lookup" className="underline">
-          /lookup
-        </Link>{" "}
-        first, then come back here to compare.
-      </p>
-    );
-  }
-
-  if (candidates.length === 0) {
-    return (
-      <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-        You only have one saved book. Save at least one more to enable
-        comparison.
-      </p>
-    );
-  }
-
   return (
-    <section>
-      <h2 className="text-sm font-medium text-gray-700 mb-3">From your saved</h2>
+    <div className="space-y-4">
+      {/* Search bar — visual for now (filtering can be added later) */}
+      <div className="relative">
+        <svg
+          aria-hidden="true"
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          placeholder="Search"
+          aria-label="Search saved books"
+          className="w-full rounded-full bg-white border border-gray-200 pl-11 pr-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 shadow-sm"
+        />
+      </div>
+
       <ul className="grid grid-cols-3 gap-3">
+        {/* Scan tile (always first) */}
+        <li>
+          <ScanTile scanHref={scanHref} />
+        </li>
+
+        {/* Saved books */}
         {candidates.map((entry) => {
           const { book } = entry;
           return (
             <li key={entry.bookId}>
               <Link
                 href={buildHref(entry.bookId)}
-                className="block rounded-lg border border-gray-200 overflow-hidden hover:border-gray-400 transition-colors"
+                className="block rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
               >
                 {book.cover_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -345,28 +423,58 @@ function PickerGrid({
                     src={book.cover_url}
                     alt=""
                     className="w-full aspect-[2/3] object-cover"
+                    style={{
+                      borderRadius: "2px",
+                    }}
                   />
                 ) : (
-                  <div className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-2 text-center">
+                  <div
+                    className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-2 text-center"
+                    style={{ borderRadius: "2px" }}
+                  >
                     {book.title ?? "no cover"}
                   </div>
                 )}
-                <div className="p-2">
-                  <p className="text-xs font-medium leading-tight line-clamp-2">
-                    {book.title ?? "Untitled"}
-                  </p>
-                  {book.authors.length > 0 && (
-                    <p className="text-[10px] text-gray-600 truncate mt-0.5">
-                      {book.authors.join(", ")}
-                    </p>
-                  )}
-                </div>
               </Link>
             </li>
           );
         })}
       </ul>
-    </section>
+
+      {saved.length === 0 && (
+        <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          No saved books yet. Save books from{" "}
+          <Link href="/lookup" className="underline">
+            Search
+          </Link>{" "}
+          or scan one above.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ScanTile({ scanHref }: { scanHref: string }) {
+  return (
+    <Link
+      href={scanHref}
+      className="block w-full aspect-[2/3] rounded-lg flex flex-col items-center justify-center text-center px-2 transition-opacity hover:opacity-90 active:opacity-80"
+      style={{
+        backgroundColor: "#ECF1E0",
+        borderRadius: "2px",
+      }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/mascot.svg"
+        alt=""
+        className="w-2/3 h-auto mb-2"
+        aria-hidden="true"
+      />
+      <span className="text-xs text-[#1E1E1E] font-medium">
+        Scan a new book!
+      </span>
+    </Link>
   );
 }
 

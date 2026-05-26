@@ -27,7 +27,13 @@ type ScanState =
 // Tesseract (~3MB WASM) so it's slower; subsequent ones are quick.
 const OCR_INTERVAL_MS = 5000;
 
-export function Scanner() {
+export function Scanner({
+  compareMode = false,
+  compareWithId = null,
+}: {
+  compareMode?: boolean;
+  compareWithId?: string | null;
+} = {}) {
   const router = useRouter();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<Controls | null>(null);
@@ -255,7 +261,17 @@ export function Scanner() {
       {state.kind === "identified" && (
         <IdentifiedPopup
           book={state.book}
-          onConfirm={() => router.push(`/lookup?isbn=${state.book.isbn13}`)}
+          ctaLabel={compareMode ? "Compare with this Book" : "View Book Details"}
+          onConfirm={() => {
+            if (compareMode) {
+              const href = compareWithId
+                ? `/compare?a=${compareWithId}&b=${state.bookId}`
+                : `/compare?a=${state.bookId}`;
+              router.push(href);
+            } else {
+              router.push(`/lookup?isbn=${state.book.isbn13}`);
+            }
+          }}
           onDismiss={resumeScanning}
         />
       )}
@@ -307,10 +323,12 @@ function IdentifiedPopup({
   book,
   onConfirm,
   onDismiss,
+  ctaLabel = "View Book Details",
 }: {
   book: HardcoverBook;
   onConfirm: () => void;
   onDismiss: () => void;
+  ctaLabel?: string;
 }) {
   // Slide-up on mount + swipe-down-to-dismiss gesture (on the handle area).
   // translateY is a percentage of the popup height: 0 = fully visible,
@@ -477,7 +495,7 @@ function IdentifiedPopup({
           className="flex-1 rounded-full px-5 py-3 text-base font-semibold text-white transition-colors hover:opacity-90 active:opacity-80"
           style={{ backgroundColor: "#33A45D" }}
         >
-          View Book Details
+          {ctaLabel}
         </button>
         <button
           type="button"
