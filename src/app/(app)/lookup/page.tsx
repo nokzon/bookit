@@ -192,8 +192,7 @@ function ExitButton() {
     <Link
       href="/scan"
       aria-label="Close"
-      className="w-12 h-12 rounded-full flex items-center justify-center transition-opacity hover:opacity-80 active:opacity-60"
-      style={{ backgroundColor: BUTTON_BG }}
+      className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm transition-opacity hover:opacity-80 active:opacity-60"
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/book-details/exit-icon.svg" alt="" width={20} height={20} />
@@ -244,7 +243,7 @@ function BookDetail({
           </div>
         )}
 
-        <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex-1 min-w-0 space-y-[10px]">
           <h1
             style={{
               overflow: "hidden",
@@ -422,6 +421,43 @@ function BookDetail({
         </section>
       )}
 
+      {/* View in Hardcover (4px below Popular Reviews) */}
+      {book.slug && (
+        <div className="flex justify-center" style={{ marginTop: "4px" }}>
+          <a
+            href={`https://hardcover.app/books/${book.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center transition-opacity hover:opacity-80 active:opacity-60"
+            style={{
+              padding: "4px 12px",
+              gap: "6.712px",
+              borderRadius: "100px",
+              border: "1px solid rgba(84, 84, 84, 0.10)",
+              background: "rgba(255, 255, 255, 0.80)",
+              fontFamily: JOST_STACK,
+              fontSize: "16px",
+              color: "#1E1E1E",
+            }}
+          >
+            <span>View in</span>
+            <span
+              className="inline-flex items-center"
+              style={{ gap: "4px" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/book-details/hardcover-logo.png"
+                alt=""
+                width={18}
+                height={22}
+                aria-hidden="true"
+              />
+              <span style={{ fontWeight: 700 }}>Hardcover</span>
+            </span>
+          </a>
+        </div>
+      )}
     </FullscreenShell>
   );
 }
