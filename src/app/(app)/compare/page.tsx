@@ -42,16 +42,20 @@ export default async function ComparePage({
       style={{ backgroundColor: "#F9FDF8" }}
     >
       <div
-        className="mx-auto w-full max-w-2xl px-6 pb-12 space-y-8"
-        style={{ paddingTop: "calc(60px + env(safe-area-inset-top))" }}
+        className="fixed inset-x-0 z-[60] pointer-events-none"
+        style={{ top: "3rem" }}
       >
-        <header className="flex items-center justify-between gap-4">
+        <div className="mx-auto w-full max-w-2xl px-6 flex justify-end">
+          <div className="pointer-events-auto">
+            <BackButton
+              href={bookA?.isbn_13 ? `/lookup?isbn=${bookA.isbn_13}` : "/scan"}
+            />
+          </div>
+        </div>
+      </div>
+      <div className="mx-auto w-full max-w-2xl px-6 py-12">
+        <header className="mb-8">
           <h1 className="text-3xl font-bold leading-tight">Compare Books</h1>
-          <BackButton
-            href={
-              bookA?.isbn_13 ? `/lookup?isbn=${bookA.isbn_13}` : "/scan"
-            }
-          />
         </header>
 
         {/* Slot row — centered, 40px gap between slots */}
@@ -90,14 +94,14 @@ export default async function ComparePage({
           />
         </section>
 
-        {/* Focused book's genres + themes (only when comparing AND focus is set) */}
-        {state === "comparing" && focus !== null && (
-          <TagPanel book={focus === "a" ? bookA! : bookB!} />
-        )}
-
-        {/* Comparison card */}
+        {/* Comparing state: focused tags (optional) + comparison card */}
         {state === "comparing" && bookA && bookB && (
-          <ComparisonCard a={bookA} b={bookB} />
+          <div className="space-y-8">
+            {focus !== null && (
+              <TagPanel book={focus === "a" ? bookA : bookB} />
+            )}
+            <ComparisonCard a={bookA} b={bookB} />
+          </div>
         )}
 
         {/* Picker grid (with Scan tile + search bar) */}
@@ -381,7 +385,7 @@ function PickerGrid({
   const candidates = saved.filter((entry) => entry.bookId !== excludeBookId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5" style={{ marginTop: "20px" }}>
       {/* Search bar — visual for now (filtering can be added later) */}
       <div className="relative">
         <svg
