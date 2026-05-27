@@ -68,29 +68,22 @@ function CompareScanShell({
     compareWithId !== null ? `/compare?a=${compareWithId}` : "/compare";
 
   return (
-    <>
-      <main
-        className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
-        style={{ backgroundColor: PAGE_BG }}
-      >
-        <div
-          className="mx-auto w-full max-w-md px-6 space-y-8"
-          style={{
-            paddingTop: "calc(48px + env(safe-area-inset-top))",
-            paddingBottom: "calc(96px + env(safe-area-inset-bottom))",
-          }}
-        >
-          <ScanPrompt />
-          {children}
-        </div>
-      </main>
-
+    <main
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain"
+      style={{ backgroundColor: PAGE_BG }}
+    >
       <div
-        className="fixed bottom-3 inset-x-3 z-[55] flex pb-[env(safe-area-inset-bottom)]"
+        className="mx-auto w-full max-w-md px-6 space-y-8"
+        style={{
+          paddingTop: "calc(48px + env(safe-area-inset-top))",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
+        }}
       >
+        <ScanPrompt />
+        {children}
         <Link
           href={returnHref}
-          className="flex-1 rounded-full text-center transition-colors hover:bg-[#4a4a4a] active:bg-[#1a1a1a]"
+          className="block w-full rounded-full text-center transition-colors hover:bg-[#4a4a4a] active:bg-[#1a1a1a]"
           style={{
             backgroundColor: "#333",
             color: "#FFF",
@@ -103,6 +96,6 @@ function CompareScanShell({
           Return to compare page
         </Link>
       </div>
-    </>
+    </main>
   );
 }

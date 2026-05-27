@@ -155,7 +155,7 @@ export function PickerGrid({
                     <button
                       type="submit"
                       onClick={() => setSearchOpen(false)}
-                      className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-gray-50"
+                      className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-gray-50 active:bg-gray-100"
                     >
                       {hit.coverUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -231,7 +231,7 @@ export function PickerGrid({
                       setLibrary(opt);
                       setDropdownOpen(false);
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-gray-50 active:bg-gray-100"
                     style={{
                       color: "#1E1E1E",
                       fontWeight: library === opt ? 700 : 400,
@@ -255,7 +255,7 @@ export function PickerGrid({
             <li key={c.bookId}>
               <Link
                 href={hrefFor(c.bookId)}
-                className="block rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+                className="block rounded-lg overflow-hidden hover:opacity-90 active:opacity-80 transition-opacity"
               >
                 {c.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
