@@ -385,7 +385,7 @@ function PickerGrid({
   const candidates = saved.filter((entry) => entry.bookId !== excludeBookId);
 
   return (
-    <div className="space-y-5" style={{ marginTop: "20px" }}>
+    <div className="space-y-8" style={{ marginTop: "32px" }}>
       {/* Search bar — visual for now (filtering can be added later) */}
       <div className="relative">
         <svg
