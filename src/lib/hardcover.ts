@@ -2,6 +2,17 @@ import "server-only";
 
 const HARDCOVER_ENDPOINT = "https://api.hardcover.app/v1/graphql";
 
+// Hardcover's official typesense-backed search endpoint. The free-text /books
+// query with _ilike is restricted on the public API tier (403), so we use this
+// instead.
+const SEARCH_QUERY = `
+  query SearchBooks($q: String!) {
+    search(query: $q, query_type: "books", per_page: 24, page: 1) {
+      results
+    }
+  }
+`;
+
 const BOOK_BY_ISBN_QUERY = `
   query BookByIsbn($isbn: String!) {
     editions(where: { isbn_13: { _eq: $isbn } }, limit: 1) {
@@ -88,6 +99,20 @@ export type LookupResult =
   | { ok: true; book: HardcoverBook }
   | { ok: false; reason: "not-found" | "api-error"; message?: string };
 
+export type HardcoverSearchHit = {
+  bookId: number;
+  title: string;
+  authors: string[];
+  coverUrl: string | null;
+  isbn13: string;
+  rating: number | null;
+  usersCount: number | null;
+};
+
+export type SearchResult =
+  | { ok: true; hits: HardcoverSearchHit[] }
+  | { ok: false; reason: "api-error"; message?: string };
+
 type UserBookRaw = {
   rating: number | null;
   review_raw: string | null;
@@ -95,6 +120,23 @@ type UserBookRaw = {
     username: string | null;
     image: { url: string | null } | null;
   } | null;
+};
+
+// Hardcover's `search.results` is Typesense JSON. Each hit's `document` shape
+// can vary; we read fields defensively.
+type SearchHitDocument = {
+  id?: number | string;
+  title?: string | null;
+  image?: { url?: string | null } | null;
+  rating?: number | null;
+  users_count?: number | null;
+  author_names?: string[];
+  contributions?: Array<{ author?: { name?: string | null } | null }>;
+  isbns?: Array<string | null>;
+};
+
+type SearchResultsJson = {
+  hits?: Array<{ document?: SearchHitDocument | null } | null>;
 };
 
 type EditionRaw = {
@@ -218,4 +260,135 @@ function mapEdition(edition: EditionRaw): HardcoverBook {
     themes,
     reviews,
   };
+}
+
+export async function searchBooks(query: string): Promise<SearchResult> {
+  const trimmed = query.trim();
+  if (!trimmed) return { ok: true, hits: [] };
+
+  // If the query is a 13-digit number, treat as an ISBN-13 lookup and surface
+  // it as a single-hit list. Hardcover's typesense search isn't reliable for
+  // ISBNs, and we have a direct lookup path already.
+  const cleaned = trimmed.replace(/[\s-]/g, "");
+  if (/^\d{13}$/.test(cleaned)) {
+    const result = await lookupBookByIsbn(cleaned);
+    if (!result.ok) {
+      if (result.reason === "not-found") return { ok: true, hits: [] };
+      return { ok: false, reason: "api-error", message: result.message };
+    }
+    const b = result.book;
+    return {
+      ok: true,
+      hits: [
+        {
+          bookId: b.editionId,
+          title: b.title ?? b.editionTitle ?? cleaned,
+          authors: b.authors,
+          coverUrl: b.coverUrl,
+          isbn13: b.isbn13,
+          rating: b.rating,
+          usersCount: b.usersCount,
+        },
+      ],
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(HARDCOVER_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader(),
+      },
+      body: JSON.stringify({
+        query: SEARCH_QUERY,
+        variables: { q: trimmed },
+      }),
+      cache: "no-store",
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      reason: "api-error",
+      message: err instanceof Error ? err.message : "Network error",
+    };
+  }
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      reason: "api-error",
+      message: `Hardcover returned HTTP ${response.status}`,
+    };
+  }
+
+  const payload = (await response.json()) as {
+    data?: { search?: { results?: SearchResultsJson | string | null } | null };
+    errors?: Array<{ message: string }>;
+  };
+
+  if (payload.errors?.length) {
+    return {
+      ok: false,
+      reason: "api-error",
+      message: payload.errors.map((e) => e.message).join("; "),
+    };
+  }
+
+  // `results` is jsonb — usually returned as an object, but be defensive in
+  // case the API hands back a JSON string.
+  const raw = payload.data?.search?.results;
+  const results: SearchResultsJson | null =
+    typeof raw === "string" ? safeParse(raw) : (raw ?? null);
+
+  const hits: HardcoverSearchHit[] = [];
+  for (const hit of results?.hits ?? []) {
+    const doc = hit?.document;
+    if (!doc || !doc.title) continue;
+    const bookId = typeof doc.id === "string" ? Number(doc.id) : doc.id;
+    if (!Number.isFinite(bookId)) continue;
+    const isbn13 = pickIsbn13(doc.isbns);
+    if (!isbn13) continue;
+    hits.push({
+      bookId: bookId as number,
+      title: doc.title,
+      authors: extractAuthors(doc),
+      coverUrl: doc.image?.url ?? null,
+      isbn13,
+      rating: doc.rating ?? null,
+      usersCount: doc.users_count ?? null,
+    });
+  }
+
+  return { ok: true, hits };
+}
+
+function safeParse(s: string): SearchResultsJson | null {
+  try {
+    return JSON.parse(s) as SearchResultsJson;
+  } catch {
+    return null;
+  }
+}
+
+function pickIsbn13(isbns: Array<string | null> | undefined): string | null {
+  if (!Array.isArray(isbns)) return null;
+  for (const candidate of isbns) {
+    if (typeof candidate !== "string") continue;
+    const cleaned = candidate.replace(/[\s-]/g, "");
+    if (/^\d{13}$/.test(cleaned)) return cleaned;
+  }
+  return null;
+}
+
+function extractAuthors(doc: SearchHitDocument): string[] {
+  if (Array.isArray(doc.author_names) && doc.author_names.length > 0) {
+    return doc.author_names.filter(
+      (n): n is string => typeof n === "string" && n.length > 0,
+    );
+  }
+  return (doc.contributions ?? [])
+    .map((c) => c?.author?.name)
+    .filter((n): n is string => typeof n === "string" && n.length > 0);
 }

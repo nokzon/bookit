@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { listSaved } from "@/lib/db/saved";
+import { listRecents } from "@/lib/db/recents";
 import { getBookById, type DbBook } from "@/lib/db/books";
 import { BackButton } from "./back-button";
+import { PickerGrid, type CompareCandidate } from "./picker-grid";
 
 type SearchParams = Promise<{ a?: string; b?: string; focus?: string }>;
 
@@ -15,7 +17,7 @@ export default async function ComparePage({
   const bId = parseId(params.b);
   const focus = params.focus === "a" || params.focus === "b" ? params.focus : null;
 
-  const saved = await listSaved();
+  const [saved, recents] = await Promise.all([listSaved(), listRecents()]);
   const byId = new Map<number, DbBook>();
   for (const entry of saved) byId.set(entry.bookId, entry.book);
 
@@ -55,7 +57,18 @@ export default async function ComparePage({
       </div>
       <div className="mx-auto w-full max-w-2xl px-6 py-12">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold leading-tight">Compare Books</h1>
+          <h1
+            style={{
+              color: "#1E1E1E",
+              fontFamily: "var(--font-livvic), system-ui, sans-serif",
+              fontSize: "32px",
+              fontStyle: "normal",
+              fontWeight: 600,
+              lineHeight: "normal",
+            }}
+          >
+            Compare Books
+          </h1>
         </header>
 
         {/* Slot row — centered, 40px gap between slots */}
@@ -107,13 +120,9 @@ export default async function ComparePage({
         {/* Picker grid (with Scan tile + search bar) */}
         {state !== "comparing" && (
           <PickerGrid
-            saved={saved}
-            excludeBookId={validA}
-            buildHref={(bookId) =>
-              validA === null
-                ? `/compare?a=${bookId}`
-                : `/compare?a=${validA}&b=${bookId}`
-            }
+            savedCandidates={toCandidates(saved, validA)}
+            recentCandidates={toCandidates(recents, validA)}
+            selectedA={validA}
             scanHref={
               validA !== null
                 ? `/scan?compareWith=${validA}`
@@ -371,120 +380,19 @@ function TagPanel({ book }: { book: DbBook }) {
   );
 }
 
-function PickerGrid({
-  saved,
-  excludeBookId,
-  buildHref,
-  scanHref,
-}: {
-  saved: Awaited<ReturnType<typeof listSaved>>;
-  excludeBookId: number | null;
-  buildHref: (bookId: number) => string;
-  scanHref: string;
-}) {
-  const candidates = saved.filter((entry) => entry.bookId !== excludeBookId);
-
-  return (
-    <div className="space-y-8" style={{ marginTop: "32px" }}>
-      {/* Search bar — visual for now (filtering can be added later) */}
-      <div className="relative">
-        <svg
-          aria-hidden="true"
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          placeholder="Search"
-          aria-label="Search saved books"
-          className="w-full rounded-full bg-white border border-gray-200 pl-11 pr-4 py-3 text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 shadow-sm"
-        />
-      </div>
-
-      <ul className="grid grid-cols-3 gap-3">
-        {/* Scan tile (always first) */}
-        <li>
-          <ScanTile scanHref={scanHref} />
-        </li>
-
-        {/* Saved books */}
-        {candidates.map((entry) => {
-          const { book } = entry;
-          return (
-            <li key={entry.bookId}>
-              <Link
-                href={buildHref(entry.bookId)}
-                className="block rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
-              >
-                {book.cover_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={book.cover_url}
-                    alt=""
-                    className="w-full aspect-[2/3] object-cover"
-                    style={{
-                      borderRadius: "2px",
-                    }}
-                  />
-                ) : (
-                  <div
-                    className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-2 text-center"
-                    style={{ borderRadius: "2px" }}
-                  >
-                    {book.title ?? "no cover"}
-                  </div>
-                )}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-
-      {saved.length === 0 && (
-        <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-          No saved books yet. Save books from{" "}
-          <Link href="/lookup" className="underline">
-            Search
-          </Link>{" "}
-          or scan one above.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function ScanTile({ scanHref }: { scanHref: string }) {
-  return (
-    <Link
-      href={scanHref}
-      className="block w-full aspect-[2/3] rounded-lg flex flex-col items-center justify-center text-center px-2 transition-opacity hover:opacity-90 active:opacity-80"
-      style={{
-        backgroundColor: "#ECF1E0",
-        borderRadius: "2px",
-      }}
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/brand/mascot.svg"
-        alt=""
-        className="w-2/3 h-auto mb-2"
-        aria-hidden="true"
-      />
-      <span className="text-xs text-[#1E1E1E] font-medium">
-        Scan a new book!
-      </span>
-    </Link>
-  );
+function toCandidates(
+  entries: Array<{ bookId: number; book: DbBook }>,
+  excludeBookId: number | null,
+): CompareCandidate[] {
+  return entries
+    .filter((entry) => entry.bookId !== excludeBookId)
+    .map((entry) => ({
+      bookId: entry.bookId,
+      title: entry.book.title,
+      authors: entry.book.authors,
+      coverUrl: entry.book.cover_url,
+      isbn13: entry.book.isbn_13,
+    }));
 }
 
 function yearFromDate(d: string | null): string {

@@ -3,16 +3,19 @@ import Link from "next/link";
 import { isValidIsbn13, normalizeIsbn13 } from "@/lib/isbn";
 import {
   lookupBookByIsbn,
+  searchBooks,
   type HardcoverBook,
   type HardcoverReview,
+  type HardcoverSearchHit,
 } from "@/lib/hardcover";
 import { upsertBook } from "@/lib/db/books";
 import { recordRecent } from "@/lib/db/recents";
 import { isSaved } from "@/lib/db/saved";
 import { SaveButton } from "./save-button";
+import { SearchInput } from "./search-input";
 import { SummaryText } from "./summary-text";
 
-type SearchParams = Promise<{ isbn?: string }>;
+type SearchParams = Promise<{ isbn?: string; q?: string }>;
 
 const PAGE_BG = "#F9FDF8";
 const BUTTON_BG = "#F5F5F5";
@@ -46,8 +49,12 @@ const SECTION_HEADING_STYLE = {
 
 async function lookupAction(formData: FormData) {
   "use server";
-  const raw = String(formData.get("isbn") ?? "");
-  redirect(`/lookup?isbn=${encodeURIComponent(raw)}`);
+  const raw = String(formData.get("q") ?? "").trim();
+  if (!raw) redirect("/lookup");
+  // Always go through the results-list view so the user explicitly picks a
+  // book before we record it as a recent. Direct `?isbn=` links from other
+  // pages (scan, saved, etc.) still navigate straight to detail.
+  redirect(`/lookup?q=${encodeURIComponent(raw)}`);
 }
 
 export default async function LookupPage({
@@ -55,14 +62,23 @@ export default async function LookupPage({
 }: {
   searchParams: SearchParams;
 }) {
-  const { isbn: rawInput } = await searchParams;
+  const { isbn: rawInput, q: rawQuery } = await searchParams;
   const submitted = rawInput?.trim() ?? "";
+  const query = rawQuery?.trim() ?? "";
 
-  // No ISBN in URL → render the Search tab landing (manual paste form).
-  if (!submitted) {
-    return <SearchForm />;
+  if (submitted) {
+    return await renderIsbnLookup(submitted);
   }
 
+  if (query) {
+    return await renderSearchResults(query);
+  }
+
+  // No params → render the Search tab landing (manual paste form).
+  return <SearchForm />;
+}
+
+async function renderIsbnLookup(submitted: string) {
   const normalized = normalizeIsbn13(submitted);
 
   if (!isValidIsbn13(normalized)) {
@@ -74,7 +90,7 @@ export default async function LookupPage({
         </p>
         <p className="text-sm">
           <Link href="/lookup" className="underline text-gray-700">
-            Try another ISBN
+            Try another search
           </Link>
         </p>
       </FullscreenShell>
@@ -113,13 +129,49 @@ export default async function LookupPage({
   return <BookDetail book={result.book} bookId={bookId} saved={saved} />;
 }
 
-function SearchForm() {
+async function renderSearchResults(query: string) {
+  const result = await searchBooks(query);
+
+  if (!result.ok) {
+    return (
+      <SearchForm initialQuery={query}>
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">
+          {result.message ?? "Search failed"}
+        </p>
+      </SearchForm>
+    );
+  }
+
+  return (
+    <SearchForm initialQuery={query}>
+      {result.hits.length === 0 ? (
+        <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          No matches for <strong>{query}</strong>.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {result.hits.map((hit) => (
+            <SearchResultRow key={hit.bookId} hit={hit} />
+          ))}
+        </ul>
+      )}
+    </SearchForm>
+  );
+}
+
+function SearchForm({
+  initialQuery = "",
+  children,
+}: {
+  initialQuery?: string;
+  children?: React.ReactNode;
+}) {
   return (
     <main className="mx-auto w-full max-w-xl px-6 py-12 space-y-6">
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">Search by ISBN</h1>
+        <h1 className="text-2xl font-semibold">Search</h1>
         <p className="text-sm text-gray-600">
-          Type or paste a 13-digit ISBN to look up a book. (Or tap{" "}
+          Type a book title, or paste a 13-digit ISBN. (Or tap{" "}
           <Link href="/scan" className="underline">
             Bookit
           </Link>{" "}
@@ -128,23 +180,58 @@ function SearchForm() {
       </header>
 
       <form action={lookupAction} className="flex gap-2">
-        <input
-          name="isbn"
-          type="text"
-          required
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="978-3-16-148410-0"
-          className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-base"
-        />
+        <SearchInput initialValue={initialQuery} />
         <button
           type="submit"
           className="rounded-md bg-[#333] hover:bg-[#4a4a4a] active:bg-[#1a1a1a] px-4 py-2 text-sm font-medium text-white transition-colors"
         >
-          Look up
+          Search
         </button>
       </form>
+
+      {children}
     </main>
+  );
+}
+
+function SearchResultRow({ hit }: { hit: HardcoverSearchHit }) {
+  return (
+    <li className="rounded-lg border border-gray-200 p-4 flex gap-4">
+      {hit.coverUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={hit.coverUrl}
+          alt=""
+          className="w-16 h-auto rounded shadow-sm flex-shrink-0"
+        />
+      ) : (
+        <div className="w-16 h-24 rounded bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 flex-shrink-0">
+          no cover
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0">
+        <Link
+          href={`/lookup?isbn=${hit.isbn13}`}
+          className="text-base font-semibold leading-tight hover:underline"
+        >
+          {hit.title}
+        </Link>
+        {hit.authors.length > 0 && (
+          <p className="text-sm text-gray-600 truncate">
+            {hit.authors.join(", ")}
+          </p>
+        )}
+        {hit.rating !== null && (
+          <p className="text-xs text-gray-500 mt-1">
+            ★ {hit.rating.toFixed(1)}
+            {hit.usersCount !== null && (
+              <> · {hit.usersCount.toLocaleString()} readers</>
+            )}
+          </p>
+        )}
+      </div>
+    </li>
   );
 }
 
