@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { BottomNav } from "@/components/BottomNav";
+import { NavRouteTracker } from "@/components/NavRouteTracker";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,6 +47,9 @@ export default async function AppLayout({
       </main>
 
       <BottomNav />
+      <Suspense fallback={null}>
+        <NavRouteTracker />
+      </Suspense>
     </div>
   );
 }

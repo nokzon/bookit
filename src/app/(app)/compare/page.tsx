@@ -3,6 +3,7 @@ import { listSaved } from "@/lib/db/saved";
 import { listRecents } from "@/lib/db/recents";
 import { getBookById, type DbBook } from "@/lib/db/books";
 import { BackButton } from "./back-button";
+import { ExitButton } from "./exit-button";
 import { PickerGrid, type CompareCandidate } from "./picker-grid";
 
 type SearchParams = Promise<{ a?: string; b?: string; focus?: string }>;
@@ -47,11 +48,14 @@ export default async function ComparePage({
         className="fixed inset-x-0 z-[60] pointer-events-none"
         style={{ top: "3rem" }}
       >
-        <div className="mx-auto w-full max-w-2xl px-6 flex justify-end">
+        <div className="mx-auto w-full max-w-2xl px-6 flex justify-end gap-2">
           <div className="pointer-events-auto">
             <BackButton
               href={bookA?.isbn_13 ? `/lookup?isbn=${bookA.isbn_13}` : "/scan"}
             />
+          </div>
+          <div className="pointer-events-auto">
+            <ExitButton />
           </div>
         </div>
       </div>
