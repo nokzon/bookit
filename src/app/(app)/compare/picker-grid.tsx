@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import type { HardcoverSearchHit } from "@/lib/hardcover";
+import { getSearchSuggestions } from "@/app/(app)/lookup/actions";
+import { selectForCompare } from "./actions";
 
-const MAX_SUGGESTIONS = 6;
+const DEBOUNCE_MS = 250;
+const MIN_QUERY_LENGTH = 2;
 const SEARCH_TEXT_COLOR = "#6F7961";
 const PILL_ICON_COLOR = "#595959";
 
@@ -29,6 +33,7 @@ export type CompareCandidate = {
 };
 
 type Library = "saved" | "recents";
+type FetchedResult = { query: string; hits: HardcoverSearchHit[] };
 
 const LIBRARY_LABEL: Record<Library, string> = {
   saved: "Saved",
@@ -50,8 +55,26 @@ export function PickerGrid({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [result, setResult] = useState<FetchedResult>({ query: "", hits: [] });
+
   const pillRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const requestId = useRef(0);
+
+  const trimmed = query.trim();
+  const queryReady = trimmed.length >= MIN_QUERY_LENGTH;
+  const showsCurrentQuery = result.query === trimmed;
+
+  useEffect(() => {
+    if (!queryReady || showsCurrentQuery) return;
+    const id = ++requestId.current;
+    const timer = window.setTimeout(async () => {
+      const hits = await getSearchSuggestions(trimmed);
+      if (id !== requestId.current) return;
+      setResult({ query: trimmed, hits });
+    }, DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [trimmed, queryReady, showsCurrentQuery]);
 
   useEffect(() => {
     function onPointer(e: PointerEvent) {
@@ -65,13 +88,9 @@ export function PickerGrid({
 
   const candidates =
     library === "saved" ? savedCandidates : recentCandidates;
-
-  const trimmed = query.trim();
-  const filtered = trimmed
-    ? candidates.filter((c) => matchesQuery(c, trimmed))
-    : candidates;
-  const suggestions = filtered.slice(0, MAX_SUGGESTIONS);
-  const showDropdown = searchOpen && trimmed.length > 0 && suggestions.length > 0;
+  const hits = showsCurrentQuery ? result.hits : [];
+  const loading = queryReady && !showsCurrentQuery;
+  const showDropdown = searchOpen && queryReady && (loading || hits.length > 0);
 
   const hrefFor = (bookId: number): string =>
     selectedA === null
@@ -106,15 +125,10 @@ export function PickerGrid({
           }}
           onFocus={() => setSearchOpen(true)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              setSearchOpen(false);
-            } else if (e.key === "Escape") {
-              setSearchOpen(false);
-            }
+            if (e.key === "Escape") setSearchOpen(false);
           }}
           placeholder="Search by book title or ISBN"
-          aria-label={`Search ${LIBRARY_LABEL[library].toLowerCase()} books`}
+          aria-label="Search books on Hardcover"
           className="w-full pl-11 pr-4 py-3 text-sm focus:outline-none placeholder:text-[#6F7961]"
           style={{
             borderRadius: "100px",
@@ -126,41 +140,53 @@ export function PickerGrid({
 
         {showDropdown && (
           <ul className="absolute left-0 right-0 top-full mt-1 z-10 bg-white border border-gray-200 rounded-md shadow-lg max-h-80 overflow-y-auto">
-            {suggestions.map((c) => (
-              <li key={c.bookId}>
-                <Link
-                  href={hrefFor(c.bookId)}
-                  onClick={() => setSearchOpen(false)}
-                  className="flex w-full items-start gap-3 px-3 py-2 hover:bg-gray-50"
-                >
-                  {c.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={c.coverUrl}
-                      alt=""
-                      className="w-8 h-12 object-cover rounded flex-shrink-0"
+            {hits.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-gray-500">Searching…</li>
+            ) : (
+              hits.map((hit) => (
+                <li key={hit.bookId}>
+                  <form action={selectForCompare}>
+                    <input type="hidden" name="isbn" value={hit.isbn13} />
+                    <input
+                      type="hidden"
+                      name="a"
+                      value={selectedA ?? ""}
                     />
-                  ) : (
-                    <div className="w-8 h-12 rounded bg-gray-100 flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {c.title ?? "Untitled"}
-                    </p>
-                    {c.authors.length > 0 && (
-                      <p className="text-xs text-gray-500 truncate">
-                        {c.authors.join(", ")}
-                      </p>
-                    )}
-                  </div>
-                </Link>
-              </li>
-            ))}
+                    <button
+                      type="submit"
+                      onClick={() => setSearchOpen(false)}
+                      className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-gray-50"
+                    >
+                      {hit.coverUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={hit.coverUrl}
+                          alt=""
+                          className="w-8 h-12 object-cover rounded flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="w-8 h-12 rounded bg-gray-100 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {hit.title}
+                        </p>
+                        {hit.authors.length > 0 && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {hit.authors.join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  </form>
+                </li>
+              ))
+            )}
           </ul>
         )}
       </div>
 
-      <section className="space-y-1">
+      <section className="space-y-3">
         <h2 style={SECTION_HEADING_STYLE}>Your Library</h2>
 
         <div ref={pillRef} className="relative inline-block">
@@ -183,9 +209,7 @@ export function PickerGrid({
           >
             <LibraryIcon library={library} />
             <span>
-              <span style={{ fontWeight: 700, color: "#595959" }}>
-                {LIBRARY_LABEL[library]}
-              </span>{" "}
+              <span style={{ fontWeight: 700 }}>{LIBRARY_LABEL[library]}</span>{" "}
               books
             </span>
             <span style={{ marginLeft: "2px", display: "inline-flex" }}>
@@ -221,61 +245,61 @@ export function PickerGrid({
             </ul>
           )}
         </div>
-      </section>
 
-      <ul className="grid grid-cols-3 gap-3" style={{ marginTop: "20px" }}>
-        <li>
-          <ScanTile scanHref={scanHref} />
-        </li>
-
-        {filtered.map((c) => (
-          <li key={c.bookId}>
-            <Link
-              href={hrefFor(c.bookId)}
-              className="block rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
-            >
-              {c.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={c.coverUrl}
-                  alt=""
-                  className="w-full aspect-[2/3] object-cover"
-                  style={{ borderRadius: "2px" }}
-                />
-              ) : (
-                <div
-                  className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-2 text-center"
-                  style={{ borderRadius: "2px" }}
-                >
-                  {c.title ?? "no cover"}
-                </div>
-              )}
-            </Link>
+        <ul className="grid grid-cols-3 gap-3">
+          <li>
+            <ScanTile scanHref={scanHref} />
           </li>
-        ))}
-      </ul>
 
-      {candidates.length === 0 && (
-        <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
-          {library === "saved" ? (
-            <>
-              No saved books yet. Save books from{" "}
-              <Link href="/lookup" className="underline">
-                Search
-              </Link>{" "}
-              or scan one above.
-            </>
-          ) : (
-            <>
-              No recent books yet. Look up a book from{" "}
-              <Link href="/lookup" className="underline">
-                Search
-              </Link>{" "}
-              or scan one above.
-            </>
-          )}
-        </p>
-      )}
+          {candidates.map((c) => (
+            <li key={c.bookId}>
+              <Link
+                href={hrefFor(c.bookId)}
+                className="block rounded-lg overflow-hidden hover:opacity-90 transition-opacity"
+              >
+                {c.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.coverUrl}
+                    alt=""
+                    className="w-full aspect-[2/3] object-cover"
+                    style={{ borderRadius: "2px" }}
+                  />
+                ) : (
+                  <div
+                    className="w-full aspect-[2/3] bg-gray-100 flex items-center justify-center text-[10px] text-gray-400 px-2 text-center"
+                    style={{ borderRadius: "2px" }}
+                  >
+                    {c.title ?? "no cover"}
+                  </div>
+                )}
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        {candidates.length === 0 && (
+          <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            {library === "saved" ? (
+              <>
+                No saved books yet. Save books from{" "}
+                <Link href="/lookup" className="underline">
+                  Search
+                </Link>{" "}
+                or scan one above.
+              </>
+            ) : (
+              <>
+                No recent books yet. Look up a book from{" "}
+                <Link href="/lookup" className="underline">
+                  Search
+                </Link>{" "}
+                or scan one above.
+              </>
+            )}
+          </p>
+        )}
+      </section>
     </div>
   );
 }
@@ -367,17 +391,4 @@ function ScanTile({ scanHref }: { scanHref: string }) {
       </span>
     </Link>
   );
-}
-
-function matchesQuery(c: CompareCandidate, query: string): boolean {
-  const q = query.toLowerCase();
-  const cleanedQuery = query.replace(/[\s-]/g, "");
-  if (/^\d+$/.test(cleanedQuery) && c.isbn13.includes(cleanedQuery)) {
-    return true;
-  }
-  if (c.title?.toLowerCase().includes(q)) return true;
-  for (const author of c.authors) {
-    if (author.toLowerCase().includes(q)) return true;
-  }
-  return false;
 }
