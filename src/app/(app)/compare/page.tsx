@@ -21,14 +21,16 @@ export default async function ComparePage({
   const [saved, recents] = await Promise.all([listSaved(), listRecents()]);
   const byId = new Map<number, DbBook>();
   for (const entry of saved) byId.set(entry.bookId, entry.book);
+  for (const entry of recents) byId.set(entry.bookId, entry.book);
 
-  // Book A can be any book the user has identified (saved or just looked up).
-  // Book B is always picked from the user's saved list.
+  // Both slots accept any book the user has identified — from saved, recents,
+  // a scan, or a global Hardcover search. Fall back to the books table so
+  // freshly-upserted books (not yet in saved/recents) still resolve.
   const bookA =
     aId !== null ? (byId.get(aId) ?? (await getBookById(aId))) : null;
-  const bookB = bId !== null ? (byId.get(bId) ?? null) : null;
+  const bookB =
+    bId !== null ? (byId.get(bId) ?? (await getBookById(bId))) : null;
 
-  // Drop selections that aren't actually in saved (e.g. unsaved since URL was set)
   const validA = bookA ? aId : null;
   const validB = bookB ? bId : null;
 

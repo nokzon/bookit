@@ -154,7 +154,6 @@ export function PickerGrid({
                     />
                     <button
                       type="submit"
-                      onClick={() => setSearchOpen(false)}
                       className="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-gray-50 active:bg-gray-100"
                     >
                       {hit.coverUrl ? (
