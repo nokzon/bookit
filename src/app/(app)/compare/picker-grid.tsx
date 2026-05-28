@@ -195,13 +195,12 @@ export function PickerGrid({
             onClick={() => setDropdownOpen((o) => !o)}
             aria-haspopup="listbox"
             aria-expanded={dropdownOpen}
-            className="inline-flex items-center transition-opacity hover:opacity-80 active:opacity-60"
+            className="inline-flex items-center bg-white/80 hover:bg-white/60 active:bg-white/40 transition-colors"
             style={{
               padding: "4px 12px",
               gap: "6.712px",
               borderRadius: "100px",
               border: "1px solid rgba(84, 84, 84, 0.10)",
-              background: "rgba(255, 255, 255, 0.80)",
               fontFamily: JOST_STACK,
               fontSize: "16px",
               color: "#1E1E1E",
@@ -373,11 +372,8 @@ function ScanTile({ scanHref }: { scanHref: string }) {
   return (
     <Link
       href={scanHref}
-      className="block w-full aspect-[2/3] rounded-lg flex flex-col items-center justify-center text-center px-2 transition-opacity hover:opacity-90 active:opacity-80"
-      style={{
-        backgroundColor: "#ECF1E0",
-        borderRadius: "2px",
-      }}
+      className="block w-full aspect-[2/3] rounded-lg flex flex-col items-center justify-center text-center px-2 transition-colors bg-[#ECF1E0] hover:bg-[#DDE7CE] active:bg-[#CCD9BB]"
+      style={{ borderRadius: "2px" }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

@@ -11,6 +11,7 @@ import {
 import { upsertBook } from "@/lib/db/books";
 import { recordRecent } from "@/lib/db/recents";
 import { isSaved } from "@/lib/db/saved";
+import { ExitButton } from "@/components/ExitButton";
 import { SaveButton } from "./save-button";
 import { SearchInput } from "./search-input";
 import { SummaryText } from "./summary-text";
@@ -274,19 +275,6 @@ function FullscreenShell({
   );
 }
 
-function ExitButton() {
-  return (
-    <Link
-      href="/scan"
-      aria-label="Close"
-      className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm transition-opacity hover:opacity-80 active:opacity-60"
-    >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/book-details/exit-icon.svg" alt="" width={20} height={20} />
-    </Link>
-  );
-}
-
 function BookDetail({
   book,
   bookId,
@@ -462,12 +450,11 @@ function BookDetail({
       {/* Compare CTA */}
       <Link
         href={`/compare?a=${bookId}`}
-        className="flex items-center justify-center self-stretch transition-opacity hover:opacity-90 active:opacity-80"
+        className="flex items-center justify-center self-stretch transition-colors bg-[#E9F5DB] hover:bg-[#D9E8CC] active:bg-[#C8D7BB]"
         style={{
           padding: "14px 20px",
           gap: "4px",
           borderRadius: "12px",
-          backgroundColor: "#E9F5DB",
           color: "#33A45D",
           fontFamily: SF_PRO_STACK,
           fontSize: "17px",
@@ -497,13 +484,12 @@ function BookDetail({
               href={`https://hardcover.app/books/${book.slug}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center transition-opacity hover:opacity-80 active:opacity-60"
+              className="inline-flex items-center justify-center bg-white/80 hover:bg-white/60 active:bg-white/40 transition-colors"
               style={{
                 padding: "4px 12px",
                 gap: "6.712px",
                 borderRadius: "100px",
                 border: "1px solid rgba(84, 84, 84, 0.10)",
-                background: "rgba(255, 255, 255, 0.80)",
                 fontFamily: JOST_STACK,
                 fontSize: "16px",
                 color: "#1E1E1E",

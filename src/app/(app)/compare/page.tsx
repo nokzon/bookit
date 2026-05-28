@@ -2,8 +2,8 @@ import Link from "next/link";
 import { listSaved } from "@/lib/db/saved";
 import { listRecents } from "@/lib/db/recents";
 import { getBookById, type DbBook } from "@/lib/db/books";
+import { ExitButton } from "@/components/ExitButton";
 import { BackButton } from "./back-button";
-import { ExitButton } from "./exit-button";
 import { PickerGrid, type CompareCandidate } from "./picker-grid";
 
 type SearchParams = Promise<{ a?: string; b?: string; focus?: string }>;

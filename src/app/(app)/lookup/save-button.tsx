@@ -59,7 +59,7 @@ export function SaveButton({
         onClick={toggle}
         aria-label={saved ? "Remove from saved" : "Save book"}
         aria-pressed={saved}
-        className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm transition-opacity hover:opacity-80 active:opacity-60"
+        className="w-12 h-12 rounded-full flex items-center justify-center bg-white shadow-sm transition-colors hover:bg-[#F0F0F0] active:bg-[#E0E0E0]"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

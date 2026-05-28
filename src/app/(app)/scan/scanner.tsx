@@ -492,8 +492,7 @@ function IdentifiedPopup({
         <button
           type="button"
           onClick={onConfirm}
-          className="flex-1 rounded-full px-5 py-3 text-base font-semibold text-white transition-colors hover:opacity-90 active:opacity-80"
-          style={{ backgroundColor: "#33A45D" }}
+          className="flex-1 rounded-full px-5 py-3 text-base font-semibold text-white transition-colors bg-[#33A45D] hover:bg-[#2A8F4F] active:bg-[#1F7B3F]"
         >
           {ctaLabel}
         </button>
@@ -501,7 +500,7 @@ function IdentifiedPopup({
           type="button"
           onClick={onDismiss}
           aria-label="Scan another book"
-          className="w-12 h-12 rounded-full flex items-center justify-center transition-opacity hover:opacity-70 active:opacity-50"
+          className="w-12 h-12 rounded-full flex items-center justify-center transition-colors hover:bg-black/10 active:bg-black/20"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/scan/camera-icon.svg" alt="" width={20} height={20} />
