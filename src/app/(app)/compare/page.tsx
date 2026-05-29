@@ -113,13 +113,24 @@ export default async function ComparePage({
           />
         </section>
 
-        {/* Comparing state: focused tags (optional) + comparison card */}
+        {/* Comparing state: comparison card + focused tags / hint */}
         {state === "comparing" && bookA && bookB && (
-          <div className="space-y-8">
-            {focus !== null && (
-              <TagPanel book={focus === "a" ? bookA : bookB} />
-            )}
+          <div className="space-y-4" style={{ marginTop: "32px" }}>
             <ComparisonCard a={bookA} b={bookB} />
+            {focus !== null ? (
+              <TagPanel book={focus === "a" ? bookA : bookB} />
+            ) : (
+              <p
+                className="text-center"
+                style={{
+                  fontFamily: "var(--font-jost), system-ui, sans-serif",
+                  fontSize: "14px",
+                  color: "#7F7F7F",
+                }}
+              >
+                Tap on a book to see it&apos;s genres and themes
+              </p>
+            )}
           </div>
         )}
 
@@ -275,7 +286,18 @@ function SlotCard({
       {changeHref && (
         <Link
           href={changeHref}
-          className="inline-block rounded-full bg-emerald-100 text-emerald-800 px-3 py-1 text-xs font-medium hover:bg-emerald-200"
+          className="inline-flex items-center justify-center rounded-full transition-colors bg-[#E9F5DB] hover:bg-[#D9E8CC] active:bg-[#C8D7BB] whitespace-nowrap"
+          style={{
+            padding: "4.4px 17.6px",
+            gap: "8.448px",
+            color: "#33A45D",
+            textAlign: "center",
+            fontFamily: "var(--font-jost), system-ui, sans-serif",
+            fontSize: "15.84px",
+            fontWeight: 400,
+            lineHeight: "21.12px",
+            letterSpacing: "0.106px",
+          }}
         >
           Change Book
         </Link>
@@ -285,44 +307,139 @@ function SlotCard({
 }
 
 function ComparisonCard({ a, b }: { a: DbBook; b: DbBook }) {
-  const rows: Array<{ label: string; valueA: string; valueB: string }> = [
+  const JOST = "var(--font-jost), system-ui, sans-serif";
+
+  const valueStyle = {
+    fontFamily: JOST,
+    fontSize: "18px",
+    fontWeight: 400,
+    color: "#1E1E1E",
+  } as const;
+
+  const labelStyle = {
+    fontFamily: JOST,
+    fontSize: "15px",
+    fontWeight: 400,
+    color: "#1E1E1E",
+  } as const;
+
+  const rows: Array<{
+    label: string;
+    labelIcon: React.ReactNode;
+    valueA: React.ReactNode;
+    valueB: React.ReactNode;
+  }> = [
     {
       label: "Rating",
-      valueA: a.rating !== null ? `★ ${a.rating.toFixed(1)}` : "—",
-      valueB: b.rating !== null ? `★ ${b.rating.toFixed(1)}` : "—",
+      labelIcon: <StarOutlineIcon />,
+      valueA: <RatingValue rating={a.rating} />,
+      valueB: <RatingValue rating={b.rating} />,
     },
     {
       label: "Readers",
+      labelIcon: (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/book-details/save-icon.svg"
+          alt=""
+          width={22}
+          height={22}
+          aria-hidden="true"
+        />
+      ),
       valueA: a.users_count !== null ? a.users_count.toLocaleString() : "—",
       valueB: b.users_count !== null ? b.users_count.toLocaleString() : "—",
     },
     {
       label: "Year",
+      labelIcon: (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/book-details/calendar-icon.svg"
+          alt=""
+          width={20}
+          height={20}
+          aria-hidden="true"
+        />
+      ),
       valueA: yearFromDate(a.release_date),
       valueB: yearFromDate(b.release_date),
     },
   ];
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white">
-      <table className="w-full">
-        <tbody>
-          {rows.map((row, idx) => (
-            <tr key={row.label} className={idx > 0 ? "border-t border-gray-100" : ""}>
-              <td className="w-1/3 py-4 text-center text-base font-medium">
-                {row.valueA}
-              </td>
-              <td className="w-1/3 py-4 text-center text-sm text-gray-600">
-                {row.label}
-              </td>
-              <td className="w-1/3 py-4 text-center text-base font-medium">
-                {row.valueB}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <section
+      style={{
+        borderRadius: "20px",
+        background: "#FFF",
+        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.10)",
+        padding: "32px",
+      }}
+    >
+      {rows.map((row, idx) => (
+        <div
+          key={row.label}
+          className={idx > 0 ? "border-t border-gray-100" : ""}
+          style={{
+            display: "flex",
+            padding: "20px 0",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "36px",
+            alignSelf: "stretch",
+          }}
+        >
+          <span style={valueStyle}>{row.valueA}</span>
+          <div className="flex flex-col items-center gap-1.5">
+            {row.labelIcon}
+            <span style={labelStyle}>{row.label}</span>
+          </div>
+          <span style={valueStyle}>{row.valueB}</span>
+        </div>
+      ))}
     </section>
+  );
+}
+
+function RatingValue({ rating }: { rating: number | null }) {
+  if (rating === null) return <>—</>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <StarFilledIcon />
+      {rating.toFixed(1)}
+    </span>
+  );
+}
+
+function StarFilledIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="#F5B400"
+      aria-hidden="true"
+    >
+      <path d="M12 2l2.93 6.94L22 9.97l-5.5 4.78L18.18 22 12 18.27 5.82 22 7.5 14.75 2 9.97l7.07-1.03L12 2z" />
+    </svg>
+  );
+}
+
+function StarOutlineIcon() {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#1E1E1E"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2l2.93 6.94L22 9.97l-5.5 4.78L18.18 22 12 18.27 5.82 22 7.5 14.75 2 9.97l7.07-1.03L12 2z" />
+    </svg>
   );
 }
 
