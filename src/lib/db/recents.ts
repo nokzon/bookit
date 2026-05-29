@@ -8,6 +8,9 @@ export type RecentEntry = {
   book: DbBook;
 };
 
+// Recents only ever holds the most recently scanned books, per user.
+const MAX_RECENTS = 30;
+
 export async function recordRecent(bookId: number): Promise<void> {
   const supabase = await createClient();
   const {
@@ -29,9 +32,28 @@ export async function recordRecent(bookId: number): Promise<void> {
   if (error) {
     throw new Error(`Failed to record recent: ${error.message}`);
   }
+
+  // Prune anything past the most recent MAX_RECENTS so the list never grows
+  // beyond the cap. Find the timestamp of the oldest row we want to keep, then
+  // delete everything strictly older than it.
+  const { data: cutoffRows } = await supabase
+    .from("recents")
+    .select("looked_up_at")
+    .eq("user_id", user.id)
+    .order("looked_up_at", { ascending: false })
+    .range(MAX_RECENTS - 1, MAX_RECENTS - 1);
+
+  const cutoff = cutoffRows?.[0]?.looked_up_at;
+  if (cutoff) {
+    await supabase
+      .from("recents")
+      .delete()
+      .eq("user_id", user.id)
+      .lt("looked_up_at", cutoff);
+  }
 }
 
-export async function listRecents(limit = 50): Promise<RecentEntry[]> {
+export async function listRecents(limit = MAX_RECENTS): Promise<RecentEntry[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("recents")
