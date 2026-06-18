@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useLinkStatus } from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 type Tab = {
@@ -93,13 +92,11 @@ function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
         backgroundColor: active ? ACTIVE_BG : "transparent",
       }}
     >
-      <span className="relative inline-flex items-center justify-center">
-        <PendingIcon
-          src={tab.icon.src}
-          width={tab.icon.width}
-          height={tab.icon.height}
-        />
-      </span>
+      <PendingIcon
+        src={tab.icon.src}
+        width={tab.icon.width}
+        height={tab.icon.height}
+      />
       <span className="text-[12px] font-medium text-[#1E1E1E]">
         {tab.label}
       </span>
