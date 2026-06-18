@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
 type Tab = {
@@ -67,15 +68,13 @@ export function BottomNav() {
         href={SEARCH_TAB.href}
         aria-label="Search"
         aria-current={searchActive ? "page" : undefined}
-        className="flex-shrink-0 w-16 rounded-full shadow-sm flex items-center justify-center"
+        className="relative flex-shrink-0 w-16 rounded-full shadow-sm flex items-center justify-center"
         style={{
           backgroundColor: searchActive ? ACTIVE_BG : BAR_BG,
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <PendingIcon
           src={SEARCH_TAB.icon.src}
-          alt=""
           width={SEARCH_TAB.icon.width}
           height={SEARCH_TAB.icon.height}
         />
@@ -94,16 +93,54 @@ function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
         backgroundColor: active ? ACTIVE_BG : "transparent",
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={tab.icon.src}
-        alt=""
-        width={tab.icon.width}
-        height={tab.icon.height}
-      />
+      <span className="relative inline-flex items-center justify-center">
+        <PendingIcon
+          src={tab.icon.src}
+          width={tab.icon.width}
+          height={tab.icon.height}
+        />
+      </span>
       <span className="text-[12px] font-medium text-[#1E1E1E]">
         {tab.label}
       </span>
     </Link>
+  );
+}
+
+/**
+ * Renders a tab's icon, swapping in a spinner the instant the parent <Link> is
+ * tapped (useLinkStatus.pending) so navigation feels responsive even while the
+ * next route's server component is still resolving. Must be a descendant of the
+ * <Link> it reports on.
+ */
+function PendingIcon({
+  src,
+  width,
+  height,
+}: {
+  src: string;
+  width: number;
+  height: number;
+}) {
+  const { pending } = useLinkStatus();
+
+  if (pending) {
+    return <Spinner size={Math.max(width, height)} />;
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" width={width} height={height} />
+  );
+}
+
+function Spinner({ size }: { size: number }) {
+  return (
+    <span
+      role="status"
+      aria-label="Loading"
+      className="inline-block animate-spin rounded-full border-2 border-[#1E1E1E]/20 border-t-[#1E1E1E]"
+      style={{ width: size, height: size }}
+    />
   );
 }

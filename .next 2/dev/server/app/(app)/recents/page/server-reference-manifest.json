@@ -1,0 +1,17 @@
+{
+  "node": {
+    "00ea39fe1890369f324b18bd0b1cd5946279594c34": {
+      "workers": {
+        "app/(app)/recents/page": {
+          "moduleId": "[project]/Desktop/Projects/bookit/.next-internal/server/app/(app)/recents/page/actions.js { ACTIONS_MODULE0 => \"[project]/Desktop/Projects/bookit/src/app/auth/actions.ts [app-rsc] (ecmascript)\" } [app-rsc] (server actions loader, ecmascript)",
+          "async": false,
+          "exportedName": "signOut",
+          "filename": "Desktop/Projects/bookit/src/app/auth/actions.ts"
+        }
+      },
+      "exportedName": "signOut",
+      "filename": "Desktop/Projects/bookit/src/app/auth/actions.ts"
+    }
+  },
+  "edge": {}
+}
