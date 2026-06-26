@@ -23,9 +23,28 @@ type ScanState =
   | { kind: "no-camera" }
   | { kind: "error"; message: string };
 
-// Auto-OCR cadence: balance battery vs detection. First fire downloads
+// OCR (reading the printed ISBN digits) is the PRIMARY detector — we try it
+// first. The barcode reader is the fallback, enabled only after OCR has had a
+// few completed attempts without reading a valid ISBN. First OCR fire downloads
 // Tesseract (~3MB WASM) so it's slower; subsequent ones are quick.
-const OCR_INTERVAL_MS = 5000;
+const OCR_INTERVAL_MS = 2500;
+const OCR_FIRST_TICK_MS = 600;
+// Fall back to barcode scanning after this many OCR attempts that actually ran
+// (Tesseract recognized text) but didn't yield a valid ISBN. We only count ticks
+// where OCR genuinely ran — a slow or failed Tesseract download (offline, blocked
+// WASM fetch) is NOT counted, so download problems never trip the fallback.
+const OCR_MAX_ATTEMPTS = 4;
+// Once in the barcode-fallback phase, OCR rests but isn't permanently disabled:
+// after this many OCR ticks spent resting, OCR gets another turn (in case the
+// earlier burst just had bad framing). This alternates OCR <-> barcode for the
+// rest of the session rather than locking into barcode-only.
+const BARCODE_REST_TICKS = 4;
+// If the Tesseract call THROWS (vs. runs and finds nothing) this many times in a
+// row, OCR is treated as unavailable — typically an offline/blocked WASM
+// download. We then switch to barcode PERMANENTLY (no periodic OCR retry), since
+// retrying a broken download just wastes ticks while the barcode reader, which
+// needs no download, works. A small threshold absorbs transient network blips.
+const OCR_MAX_ERRORS = 3;
 
 export function Scanner({
   compareMode = false,
@@ -40,8 +59,23 @@ export function Scanner({
   const ocrTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ocrRunningRef = useRef(false);
   const stateRef = useRef<ScanState>({ kind: "starting" });
+  // Detection phase: start with OCR (read the printed digits), fall back to the
+  // barcode reader only once OCR has had a fair number of tries. phaseRef is the
+  // source of truth for the long-lived ZXing/OCR callbacks; detectMode mirrors
+  // it for the UI label.
+  const phaseRef = useRef<"ocr" | "barcode">("ocr");
+  const ocrAttemptsRef = useRef(0);
+  // How many OCR ticks have rested during the current barcode phase. Drives the
+  // periodic OCR retry (see BARCODE_REST_TICKS).
+  const barcodeRestRef = useRef(0);
+  // Consecutive Tesseract throws (reset on any successful run). Once this hits
+  // OCR_MAX_ERRORS, OCR is deemed unavailable and we stop retrying it for the
+  // rest of the session (see ocrUnavailableRef).
+  const ocrErrorsRef = useRef(0);
+  const ocrUnavailableRef = useRef(false);
 
   const [state, setState] = useState<ScanState>({ kind: "starting" });
+  const [detectMode, setDetectMode] = useState<"ocr" | "barcode">("ocr");
 
   // Keep a ref so long-lived callbacks (ZXing + OCR loop) can see the latest
   // state without re-binding.
@@ -94,14 +128,61 @@ export function Scanner({
   }, []);
 
   const resumeScanning = useCallback(() => {
+    // Restart the cycle: give OCR priority again before falling back to barcode.
+    // Unless OCR was deemed unavailable (download keeps failing) — then stay on
+    // barcode so we don't burn another round of failed downloads per book.
+    if (ocrUnavailableRef.current) {
+      phaseRef.current = "barcode";
+      setDetectMode("barcode");
+      setState({ kind: "scanning" });
+      return;
+    }
+    phaseRef.current = "ocr";
+    ocrAttemptsRef.current = 0;
+    setDetectMode("ocr");
     setState({ kind: "scanning" });
+  }, []);
+
+  const switchToBarcode = useCallback(() => {
+    if (phaseRef.current === "barcode") return;
+    phaseRef.current = "barcode";
+    barcodeRestRef.current = 0;
+    setDetectMode("barcode");
+  }, []);
+
+  // Give OCR another turn after it has rested during the barcode phase. Resets
+  // the attempt counter so OCR gets a fresh OCR_MAX_ATTEMPTS-sized burst.
+  const switchToOcr = useCallback(() => {
+    if (phaseRef.current === "ocr") return;
+    phaseRef.current = "ocr";
+    ocrAttemptsRef.current = 0;
+    setDetectMode("ocr");
   }, []);
 
   const runOcrTick = useCallback(async () => {
     if (ocrRunningRef.current || isPaused()) return;
+
+    // In the barcode (fallback) phase OCR rests rather than reading digits.
+    // Normally it isn't disabled: after a cooldown it hands back to OCR so a
+    // legible printed ISBN gets another chance (the earlier burst may have just
+    // had bad framing), alternating OCR <-> barcode for the session. But if OCR
+    // was deemed unavailable (download keeps failing), we stay on barcode-only.
+    if (phaseRef.current === "barcode") {
+      if (ocrUnavailableRef.current) return;
+      barcodeRestRef.current += 1;
+      if (barcodeRestRef.current >= BARCODE_REST_TICKS) {
+        switchToOcr();
+      }
+      return;
+    }
+
     const video = videoRef.current;
     if (!video || video.videoWidth === 0) return;
     ocrRunningRef.current = true;
+    // Whether Tesseract actually ran and produced text this tick. Only a real
+    // run counts toward the barcode fallback — a thrown call (offline, blocked
+    // WASM download) leaves this false so it never trips the handoff.
+    let ocrRan = false;
     try {
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
@@ -110,19 +191,39 @@ export function Scanner({
 
       const Tesseract = await import("tesseract.js");
       const { data } = await Tesseract.recognize(canvas, "eng");
-      if (isPaused()) return;
+      ocrRan = true;
+      ocrErrorsRef.current = 0;
+      if (isPaused() || phaseRef.current !== "ocr") return;
 
       const isbn = extractIsbn13(data.text ?? "");
       if (isbn) {
         await handleIsbnDetected(isbn);
+        return;
       }
     } catch {
-      // OCR failures are silent — barcode scanning keeps running and we'll
-      // retry on the next tick.
+      // OCR failures (e.g. an offline/blocked Tesseract download) are silent and
+      // NOT counted as a normal attempt, so download problems don't prematurely
+      // hand off via OCR_MAX_ATTEMPTS. But repeated throws mean OCR can't load at
+      // all — after OCR_MAX_ERRORS in a row, deem it unavailable and switch to
+      // barcode permanently (the barcode reader needs no download).
+      ocrErrorsRef.current += 1;
+      if (ocrErrorsRef.current >= OCR_MAX_ERRORS) {
+        ocrUnavailableRef.current = true;
+        switchToBarcode();
+      }
     } finally {
       ocrRunningRef.current = false;
     }
-  }, [handleIsbnDetected]);
+
+    // A real OCR run that didn't identify a book. Once OCR has had its fair
+    // share of genuine tries, hand off to the barcode reader.
+    if (ocrRan) {
+      ocrAttemptsRef.current += 1;
+      if (ocrAttemptsRef.current >= OCR_MAX_ATTEMPTS) {
+        switchToBarcode();
+      }
+    }
+  }, [handleIsbnDetected, switchToBarcode, switchToOcr]);
 
   // Start ZXing on mount; stop on unmount.
   useEffect(() => {
@@ -138,7 +239,9 @@ export function Scanner({
           { video: { facingMode: { ideal: "environment" } } },
           videoRef.current,
           (result) => {
-            if (!result || isPaused()) return;
+            // ZXing runs continuously to keep the camera feed alive, but its
+            // results are ignored until OCR has had its turn (barcode phase).
+            if (!result || isPaused() || phaseRef.current !== "barcode") return;
             const normalized = normalizeIsbn13(result.getText());
             if (isValidIsbn13(normalized)) {
               handleIsbnDetected(normalized);
@@ -189,7 +292,7 @@ export function Scanner({
       await runOcrTick();
       ocrTimerRef.current = setTimeout(tick, OCR_INTERVAL_MS);
     };
-    ocrTimerRef.current = setTimeout(tick, OCR_INTERVAL_MS);
+    ocrTimerRef.current = setTimeout(tick, OCR_FIRST_TICK_MS);
     return () => {
       if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current);
       ocrTimerRef.current = null;
@@ -235,7 +338,9 @@ export function Scanner({
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full bg-black/70 px-3 py-1 text-xs text-white">
             {state.kind === "starting"
               ? "Starting camera…"
-              : "Scanning for an ISBN…"}
+              : detectMode === "ocr"
+                ? "Reading the ISBN number…"
+                : "Scanning the barcode…"}
           </div>
         )}
         {state.kind === "previewing" && (
