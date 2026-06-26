@@ -76,6 +76,10 @@ export function Scanner({
 
   const [state, setState] = useState<ScanState>({ kind: "starting" });
   const [detectMode, setDetectMode] = useState<"ocr" | "barcode">("ocr");
+  // Whether the "what do I scan?" help guide is open. Kept separate from
+  // ScanState so opening the guide never interferes with the detection loop —
+  // the camera keeps running underneath.
+  const [showHelp, setShowHelp] = useState(false);
 
   // Keep a ref so long-lived callbacks (ZXing + OCR loop) can see the latest
   // state without re-binding.
@@ -348,6 +352,23 @@ export function Scanner({
             Looking up {state.isbn}…
           </div>
         )}
+
+        {/* Help button — opens the "what do I scan?" guide */}
+        <button
+          type="button"
+          onClick={() => setShowHelp(true)}
+          aria-label="What should I scan?"
+          className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center bg-white/90 shadow-md backdrop-blur-sm transition-colors hover:bg-white active:bg-white/80"
+          style={{
+            fontFamily: "var(--font-livvic), system-ui, sans-serif",
+            fontSize: "18px",
+            fontWeight: 700,
+            color: "#1e1e1e",
+            lineHeight: 1,
+          }}
+        >
+          ?
+        </button>
       </div>
 
       {/* Bottom-sheet style popups overlaying the camera */}
@@ -380,6 +401,8 @@ export function Scanner({
           onDismiss={resumeScanning}
         />
       )}
+
+      {showHelp && <HelpGuide onClose={() => setShowHelp(false)} />}
     </div>
   );
 }
@@ -396,6 +419,113 @@ function FallbackCard({ title, body }: { title: string; body: string }) {
         </Link>
         .
       </p>
+    </div>
+  );
+}
+
+/**
+ * Help guide shown when the user taps the "?" button — explains what to point
+ * the camera at, with an annotated ISBN barcode example. Centered modal with a
+ * dimmed backdrop; fades + scales in on mount to match the app's soft motion.
+ */
+function HelpGuide({ onClose }: { onClose: () => void }) {
+  const [shown, setShown] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setShown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Close on Escape for keyboard / desktop users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  const JOST = "var(--font-jost), system-ui, sans-serif";
+  const MANSALVA = "var(--font-mansalva), system-ui, cursive";
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center px-6"
+      style={{
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        opacity: shown ? 1 : 0,
+        transition: "opacity 0.25s ease-out",
+      }}
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="What to scan"
+    >
+      <div
+        className="flex w-full flex-col items-center shadow-2xl border border-black/5"
+        style={{
+          width: "100%",
+          maxWidth: "416px",
+          padding: "24px",
+          gap: "32px",
+          borderRadius: "27px",
+          backgroundColor: "#F5F5F5",
+          opacity: shown ? 1 : 0,
+          transform: shown ? "scale(1)" : "scale(0.95)",
+          transition: "opacity 0.25s ease-out, transform 0.25s ease-out",
+          maxHeight: "calc(100dvh - 48px)",
+          overflowY: "auto",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Title + subtitle, 16px apart */}
+        <div className="flex w-full flex-col items-center" style={{ gap: "16px" }}>
+          <h2
+            style={{
+              color: "#1E1E1E",
+              textAlign: "center",
+              fontFamily: MANSALVA,
+              fontSize: "32px",
+              fontWeight: 400,
+              lineHeight: "normal",
+              margin: 0,
+            }}
+          >
+            What to scan?
+          </h2>
+
+          <p
+            style={{
+              color: "#000",
+              textAlign: "center",
+              fontFamily: JOST,
+              fontSize: "14px",
+              fontWeight: 400,
+              lineHeight: "normal",
+              margin: 0,
+            }}
+          >
+            Point your camera at the book&apos;s ISBN (the barcode with the
+            13-digit number, usually on the back cover)
+          </p>
+        </div>
+
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/scan/isbn-example.jpeg"
+          alt="Example of a book's ISBN barcode, showing the number 978-0-241-25208-6"
+          className="w-full rounded-2xl"
+          style={{ display: "block" }}
+        />
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-full px-5 py-3 text-base font-semibold text-white transition-colors bg-[#33A45D] hover:bg-[#2A8F4F] active:bg-[#1F7B3F]"
+        >
+          Got it
+        </button>
+      </div>
     </div>
   );
 }
