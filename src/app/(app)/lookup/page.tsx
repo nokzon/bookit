@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isValidIsbn13, normalizeIsbn13 } from "@/lib/isbn";
@@ -67,19 +68,31 @@ export default async function LookupPage({
   const submitted = rawInput?.trim() ?? "";
   const query = rawQuery?.trim() ?? "";
 
+  // Each variant fetches from the Hardcover API, which is the laggy part. We
+  // wrap those in Suspense with a fallback that matches the *resolved* view, so
+  // the book-detail flow shows a single-book skeleton (not a search list) and
+  // the search flow shows result-card placeholders.
   if (submitted) {
-    return await renderIsbnLookup(submitted);
+    return (
+      <Suspense fallback={<BookDetailSkeleton />}>
+        <IsbnLookupResult submitted={submitted} />
+      </Suspense>
+    );
   }
 
   if (query) {
-    return await renderSearchResults(query);
+    return (
+      <Suspense fallback={<SearchResultsSkeleton initialQuery={query} />}>
+        <SearchResultsView query={query} />
+      </Suspense>
+    );
   }
 
   // No params → render the Search tab landing (manual paste form).
   return <SearchForm />;
 }
 
-async function renderIsbnLookup(submitted: string) {
+async function IsbnLookupResult({ submitted }: { submitted: string }) {
   const normalized = normalizeIsbn13(submitted);
 
   if (!isValidIsbn13(normalized)) {
@@ -130,7 +143,7 @@ async function renderIsbnLookup(submitted: string) {
   return <BookDetail book={result.book} bookId={bookId} saved={saved} />;
 }
 
-async function renderSearchResults(query: string) {
+async function SearchResultsView({ query }: { query: string }) {
   const result = await searchBooks(query);
 
   if (!result.ok) {
@@ -272,6 +285,85 @@ function FullscreenShell({
         </div>
       </main>
     </>
+  );
+}
+
+/**
+ * Loading state for the ?isbn book-detail flow (e.g. tapping "View Book
+ * Details" after a scan). Mirrors the real BookDetail layout — single cover +
+ * meta column, genre pills, summary lines, Compare button — inside the same
+ * FullscreenShell, so it reads as "loading this book" rather than a search.
+ */
+function BookDetailSkeleton() {
+  return (
+    <FullscreenShell>
+      {/* Header row: cover + meta */}
+      <section className="flex gap-5">
+        <div
+          className="flex-shrink-0 bg-black/5 animate-pulse"
+          style={{ width: "120px", height: "182px", borderRadius: "2px" }}
+        />
+        <div className="flex-1 min-w-0 space-y-3 pt-1">
+          <div className="h-6 w-4/5 rounded bg-black/5 animate-pulse" />
+          <div className="h-4 w-2/5 rounded bg-black/5 animate-pulse" />
+          <div className="h-4 w-1/3 rounded bg-black/5 animate-pulse" />
+          <div className="h-4 w-1/4 rounded bg-black/5 animate-pulse" />
+        </div>
+      </section>
+
+      {/* Genre */}
+      <section className="space-y-3">
+        <div className="h-5 w-24 rounded bg-black/5 animate-pulse" />
+        <div className="flex flex-wrap gap-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-8 w-20 rounded-full bg-black/5 animate-pulse"
+            />
+          ))}
+        </div>
+      </section>
+
+      {/* Summary */}
+      <section className="space-y-3">
+        <div className="h-5 w-28 rounded bg-black/5 animate-pulse" />
+        <div className="space-y-2">
+          <div className="h-3 w-full rounded bg-black/5 animate-pulse" />
+          <div className="h-3 w-full rounded bg-black/5 animate-pulse" />
+          <div className="h-3 w-5/6 rounded bg-black/5 animate-pulse" />
+          <div className="h-3 w-3/4 rounded bg-black/5 animate-pulse" />
+        </div>
+      </section>
+
+      {/* Compare CTA */}
+      <div
+        className="bg-black/5 animate-pulse"
+        style={{ height: "50px", borderRadius: "12px" }}
+      />
+    </FullscreenShell>
+  );
+}
+
+/** Loading state for the ?q search-results flow: real form + card placeholders. */
+function SearchResultsSkeleton({ initialQuery }: { initialQuery: string }) {
+  return (
+    <SearchForm initialQuery={initialQuery}>
+      <ul className="space-y-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <li
+            key={i}
+            className="rounded-lg border border-gray-200 p-4 flex gap-4"
+          >
+            <div className="w-16 h-24 rounded bg-black/5 animate-pulse flex-shrink-0" />
+            <div className="flex-1 min-w-0 space-y-2 pt-1">
+              <div className="h-4 w-4/5 rounded bg-black/5 animate-pulse" />
+              <div className="h-3 w-2/5 rounded bg-black/5 animate-pulse" />
+              <div className="h-3 w-1/3 rounded bg-black/5 animate-pulse" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </SearchForm>
   );
 }
 
