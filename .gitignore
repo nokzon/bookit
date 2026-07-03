@@ -16,6 +16,8 @@
 # next.js
 /.next/
 /out/
+# Finder/copy duplicates of the build dir (e.g. ".next 2")
+/.next */
 
 # production
 /build
