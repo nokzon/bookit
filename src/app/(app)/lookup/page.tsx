@@ -12,6 +12,7 @@ import {
 import { upsertBook } from "@/lib/db/books";
 import { recordRecent } from "@/lib/db/recents";
 import { isSaved } from "@/lib/db/saved";
+import { JOST_STACK, LIVVIC_STACK } from "@/lib/fonts";
 import { ExitButton } from "@/components/ExitButton";
 import { SaveButton } from "./save-button";
 import { SearchInput } from "./search-input";
@@ -21,8 +22,6 @@ type SearchParams = Promise<{ isbn?: string; q?: string }>;
 
 const PAGE_BG = "#F9FDF8";
 const BUTTON_BG = "#F5F5F5";
-const JOST_STACK = "var(--font-jost), system-ui, sans-serif";
-const LIVVIC_STACK = "var(--font-livvic), system-ui, sans-serif";
 const SF_PRO_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro", "SF Pro Text", system-ui, sans-serif';
 

@@ -2,7 +2,7 @@
 // server components fetch from Supabase. Mirrors the real page layout (title,
 // sort pill, 2-col cover grid) so the swap-in doesn't shift the page.
 
-const LIVVIC_STACK = "var(--font-livvic), system-ui, sans-serif";
+import { LIVVIC_STACK } from "@/lib/fonts";
 
 export function BookGridSkeleton({
   title,

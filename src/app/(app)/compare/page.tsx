@@ -2,6 +2,7 @@ import Link from "next/link";
 import { listSaved } from "@/lib/db/saved";
 import { listRecents } from "@/lib/db/recents";
 import { getBookById, type DbBook } from "@/lib/db/books";
+import { JOST_STACK, LIVVIC_STACK } from "@/lib/fonts";
 import { ExitButton } from "@/components/ExitButton";
 import { BackButton } from "./back-button";
 import { PickerGrid, type CompareCandidate } from "./picker-grid";
@@ -66,7 +67,7 @@ export default async function ComparePage({
           <h1
             style={{
               color: "#1E1E1E",
-              fontFamily: "var(--font-livvic), system-ui, sans-serif",
+              fontFamily: LIVVIC_STACK,
               fontSize: "32px",
               fontStyle: "normal",
               fontWeight: 600,
@@ -131,7 +132,6 @@ function SlotCard({
   changeHref: string | null;
   placeholder: string;
 }) {
-  const JOST = "var(--font-jost), system-ui, sans-serif";
   const COVER_WIDTH = 120; // 182 * 60/91 ≈ 120
   const COVER_HEIGHT = 182;
 
@@ -139,7 +139,7 @@ function SlotCard({
     overflow: "hidden" as const,
     color: "#000",
     textOverflow: "ellipsis" as const,
-    fontFamily: JOST,
+    fontFamily: JOST_STACK,
     fontSize: "14px",
     fontWeight: 400,
     lineHeight: "normal" as const,
@@ -150,7 +150,7 @@ function SlotCard({
 
   const authorStyle = {
     color: "rgba(127, 127, 127, 0.50)",
-    fontFamily: JOST,
+    fontFamily: JOST_STACK,
     fontSize: "14px",
     fontWeight: 400,
     lineHeight: "normal" as const,
@@ -224,7 +224,7 @@ function SlotCard({
             gap: "8.448px",
             color: "#33A45D",
             textAlign: "center",
-            fontFamily: "var(--font-jost), system-ui, sans-serif",
+            fontFamily: JOST_STACK,
             fontSize: "15.84px",
             fontWeight: 400,
             lineHeight: "21.12px",

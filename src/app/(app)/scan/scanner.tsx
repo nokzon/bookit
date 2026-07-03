@@ -9,6 +9,7 @@ import {
   normalizeIsbn13,
 } from "@/lib/isbn";
 import type { HardcoverBook } from "@/lib/hardcover";
+import { JOST_STACK, LIVVIC_STACK } from "@/lib/fonts";
 import { previewBookByIsbn } from "./actions";
 
 type Controls = { stop: () => void };
@@ -360,7 +361,7 @@ export function Scanner({
           aria-label="What should I scan?"
           className="absolute top-3 right-3 w-9 h-9 rounded-full flex items-center justify-center bg-white/90 shadow-md backdrop-blur-sm transition-colors hover:bg-white active:bg-white/80"
           style={{
-            fontFamily: "var(--font-livvic), system-ui, sans-serif",
+            fontFamily: LIVVIC_STACK,
             fontSize: "18px",
             fontWeight: 700,
             color: "#1e1e1e",
@@ -445,7 +446,6 @@ function HelpGuide({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const JOST = "var(--font-jost), system-ui, sans-serif";
   const MANSALVA = "var(--font-mansalva), system-ui, cursive";
 
   return (
@@ -498,7 +498,7 @@ function HelpGuide({ onClose }: { onClose: () => void }) {
             style={{
               color: "#000",
               textAlign: "center",
-              fontFamily: JOST,
+              fontFamily: JOST_STACK,
               fontSize: "14px",
               fontWeight: 400,
               lineHeight: "normal",
@@ -637,7 +637,7 @@ function IdentifiedPopup({
           color: "#333",
           textAlign: "center",
           fontFeatureSettings: '"liga" off, "clig" off',
-          fontFamily: "var(--font-livvic), system-ui, sans-serif",
+          fontFamily: LIVVIC_STACK,
           fontSize: "24px",
           fontStyle: "normal",
           fontWeight: 600,
@@ -682,7 +682,7 @@ function IdentifiedPopup({
 
           <div
             className="min-w-0 max-w-[180px] space-y-1.5"
-            style={{ fontFamily: "var(--font-jost), system-ui, sans-serif" }}
+            style={{ fontFamily: JOST_STACK }}
           >
             <p className="text-[17px] font-bold leading-tight line-clamp-2 text-[#1E1E1E]">
               {book.title ?? "Untitled"}

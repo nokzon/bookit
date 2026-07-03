@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { JOST_STACK } from "@/lib/fonts";
 import { Scanner } from "./scanner";
 
 type SearchParams = Promise<{ compareWith?: string }>;
 
 const PAGE_BG = "#F9FDF8";
-const JOST_STACK = "var(--font-jost), system-ui, sans-serif";
 
 export default async function ScanPage({
   searchParams,

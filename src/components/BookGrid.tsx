@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { DbBook } from "@/lib/db/books";
+import { JOST_STACK } from "@/lib/fonts";
+import { ChevronDown } from "@/components/icons";
 
-const JOST_STACK = "var(--font-jost), system-ui, sans-serif";
-
-// Shared grid used by both the Recents and Saved pages. Callers supply their
-// entries and a `getTimestamp` accessor so the "recent" / "oldest" sorts work
-// regardless of which timestamp field the entry uses (lookedUpAt vs savedAt).
-type BookEntry = { bookId: number; book: DbBook };
+// Shared grid used by both the Recents and Saved pages. Callers normalize their
+// rows to a `timestamp` field (from lookedUpAt / savedAt) so the "recent" /
+// "oldest" sorts work regardless of the source. A plain field is used rather
+// than an accessor function because this is a Client Component and function
+// props can't cross the Server -> Client boundary.
+export type BookEntry = { bookId: number; book: DbBook; timestamp: string };
 
 type SortKey = "recent" | "oldest" | "title" | "author";
 
@@ -24,17 +26,13 @@ const SORT_LABEL: Record<SortKey, string> = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.key, o.label]),
 ) as Record<SortKey, string>;
 
-function sortEntries<T extends BookEntry>(
-  entries: T[],
-  sort: SortKey,
-  getTimestamp: (entry: T) => string,
-): T[] {
+function sortEntries(entries: BookEntry[], sort: SortKey): BookEntry[] {
   const copy = [...entries];
   switch (sort) {
     case "recent":
-      return copy.sort((a, b) => getTimestamp(b).localeCompare(getTimestamp(a)));
+      return copy.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     case "oldest":
-      return copy.sort((a, b) => getTimestamp(a).localeCompare(getTimestamp(b)));
+      return copy.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
     case "title":
       return copy.sort((a, b) =>
         (a.book.title ?? "").localeCompare(b.book.title ?? ""),
@@ -46,13 +44,7 @@ function sortEntries<T extends BookEntry>(
   }
 }
 
-export function BookGrid<T extends BookEntry>({
-  entries,
-  getTimestamp,
-}: {
-  entries: T[];
-  getTimestamp: (entry: T) => string;
-}) {
+export function BookGrid({ entries }: { entries: BookEntry[] }) {
   const [sort, setSort] = useState<SortKey>("recent");
   const [open, setOpen] = useState(false);
   const pillRef = useRef<HTMLDivElement>(null);
@@ -73,7 +65,7 @@ export function BookGrid<T extends BookEntry>({
     };
   }, [open]);
 
-  const sorted = sortEntries(entries, sort, getTimestamp);
+  const sorted = sortEntries(entries, sort);
 
   return (
     <div className="space-y-6">
@@ -166,24 +158,5 @@ function BookCard({ book }: { book: DbBook }) {
         </p>
       )}
     </Link>
-  );
-}
-
-function ChevronDown() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ color: "#1E1E1E" }}
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { JOST_STACK } from "@/lib/fonts";
 
 const COLLAPSED_LINES = 8;
 
 const TEXT_STYLE = {
   color: "#000",
-  fontFamily: "var(--font-jost), system-ui, sans-serif",
+  fontFamily: JOST_STACK,
   fontSize: "16px",
   fontWeight: 400,
   lineHeight: "normal" as const,
@@ -55,7 +56,7 @@ export function SummaryText({ text }: { text: string }) {
           type="button"
           onClick={() => setExpanded((v) => !v)}
           className="text-sm text-gray-500 underline underline-offset-2 hover:text-gray-800"
-          style={{ fontFamily: "var(--font-jost), system-ui, sans-serif" }}
+          style={{ fontFamily: JOST_STACK }}
         >
           {expanded ? "View less" : "View more"}
         </button>

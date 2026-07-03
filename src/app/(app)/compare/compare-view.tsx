@@ -3,9 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import type { DbBook } from "@/lib/db/books";
-
-const JOST = "var(--font-jost), system-ui, sans-serif";
-const LIVVIC = "var(--font-livvic), system-ui, sans-serif";
+import { JOST_STACK as JOST, LIVVIC_STACK as LIVVIC } from "@/lib/fonts";
 
 const COVER_WIDTH = 120; // 182 * 60/91 ≈ 120
 const COVER_HEIGHT = 182;

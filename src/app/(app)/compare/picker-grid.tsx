@@ -4,15 +4,14 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { HardcoverSearchHit } from "@/lib/hardcover";
 import { getSearchSuggestions } from "@/app/(app)/lookup/actions";
+import { JOST_STACK, LIVVIC_STACK } from "@/lib/fonts";
+import { ChevronDown } from "@/components/icons";
 import { selectForCompare } from "./actions";
 
 const DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 2;
 const SEARCH_TEXT_COLOR = "#6F7961";
 const PILL_ICON_COLOR = "#595959";
-
-const LIVVIC_STACK = "var(--font-livvic), system-ui, sans-serif";
-const JOST_STACK = "var(--font-jost), system-ui, sans-serif";
 
 const SECTION_HEADING_STYLE = {
   overflow: "hidden" as const,
@@ -344,25 +343,6 @@ function RecentsIcon() {
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-    </svg>
-  );
-}
-
-function ChevronDown() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ color: "#1E1E1E" }}
-    >
-      <path d="m6 9 6 6 6-6" />
     </svg>
   );
 }
