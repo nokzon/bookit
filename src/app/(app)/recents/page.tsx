@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listRecents } from "@/lib/db/recents";
-import { RecentsGrid } from "./recents-grid";
+import { BookGrid } from "@/components/BookGrid";
 
 // Light fade applied over the bottom of the page, behind the nav bar.
 const BOTTOM_FADE =
@@ -33,7 +33,7 @@ export default async function RecentsPage() {
             to see it here.
           </p>
         ) : (
-          <RecentsGrid entries={entries} />
+          <BookGrid entries={entries} getTimestamp={(e) => e.lookedUpAt} />
         )}
       </div>
 

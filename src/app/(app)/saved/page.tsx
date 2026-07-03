@@ -1,5 +1,5 @@
 import { listSaved } from "@/lib/db/saved";
-import { SavedGrid } from "./saved-grid";
+import { BookGrid } from "@/components/BookGrid";
 
 // Light fade applied over the bottom of the page, behind the nav bar.
 const BOTTOM_FADE =
@@ -29,7 +29,7 @@ export default async function SavedPage() {
             add it here.
           </p>
         ) : (
-          <SavedGrid entries={entries} />
+          <BookGrid entries={entries} getTimestamp={(e) => e.savedAt} />
         )}
       </div>
 

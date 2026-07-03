@@ -2,9 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { RecentEntry } from "@/lib/db/recents";
+import type { DbBook } from "@/lib/db/books";
 
 const JOST_STACK = "var(--font-jost), system-ui, sans-serif";
+
+// Shared grid used by both the Recents and Saved pages. Callers supply their
+// entries and a `getTimestamp` accessor so the "recent" / "oldest" sorts work
+// regardless of which timestamp field the entry uses (lookedUpAt vs savedAt).
+type BookEntry = { bookId: number; book: DbBook };
 
 type SortKey = "recent" | "oldest" | "title" | "author";
 
@@ -19,13 +24,17 @@ const SORT_LABEL: Record<SortKey, string> = Object.fromEntries(
   SORT_OPTIONS.map((o) => [o.key, o.label]),
 ) as Record<SortKey, string>;
 
-function sortEntries(entries: RecentEntry[], sort: SortKey): RecentEntry[] {
+function sortEntries<T extends BookEntry>(
+  entries: T[],
+  sort: SortKey,
+  getTimestamp: (entry: T) => string,
+): T[] {
   const copy = [...entries];
   switch (sort) {
     case "recent":
-      return copy.sort((a, b) => b.lookedUpAt.localeCompare(a.lookedUpAt));
+      return copy.sort((a, b) => getTimestamp(b).localeCompare(getTimestamp(a)));
     case "oldest":
-      return copy.sort((a, b) => a.lookedUpAt.localeCompare(b.lookedUpAt));
+      return copy.sort((a, b) => getTimestamp(a).localeCompare(getTimestamp(b)));
     case "title":
       return copy.sort((a, b) =>
         (a.book.title ?? "").localeCompare(b.book.title ?? ""),
@@ -37,7 +46,13 @@ function sortEntries(entries: RecentEntry[], sort: SortKey): RecentEntry[] {
   }
 }
 
-export function RecentsGrid({ entries }: { entries: RecentEntry[] }) {
+export function BookGrid<T extends BookEntry>({
+  entries,
+  getTimestamp,
+}: {
+  entries: T[];
+  getTimestamp: (entry: T) => string;
+}) {
   const [sort, setSort] = useState<SortKey>("recent");
   const [open, setOpen] = useState(false);
   const pillRef = useRef<HTMLDivElement>(null);
@@ -58,7 +73,7 @@ export function RecentsGrid({ entries }: { entries: RecentEntry[] }) {
     };
   }, [open]);
 
-  const sorted = sortEntries(entries, sort);
+  const sorted = sortEntries(entries, sort, getTimestamp);
 
   return (
     <div className="space-y-6">
@@ -118,7 +133,7 @@ export function RecentsGrid({ entries }: { entries: RecentEntry[] }) {
       <ul className="grid grid-cols-2 gap-x-5 gap-y-7">
         {sorted.map((entry) => (
           <li key={entry.bookId}>
-            <BookCard entry={entry} />
+            <BookCard book={entry.book} />
           </li>
         ))}
       </ul>
@@ -126,8 +141,7 @@ export function RecentsGrid({ entries }: { entries: RecentEntry[] }) {
   );
 }
 
-function BookCard({ entry }: { entry: RecentEntry }) {
-  const { book } = entry;
+function BookCard({ book }: { book: DbBook }) {
   return (
     <Link href={`/lookup?isbn=${book.isbn_13}`} className="group block">
       {book.cover_url ? (
